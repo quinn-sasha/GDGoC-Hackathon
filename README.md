@@ -24,6 +24,25 @@ Django REST Framework + Nuxt.js (Vue 3) による認証システム
 
 ## セットアップ
 
+### 事前準備
+
+プロジェクトに必要なPython 3.13以上、PostgreSQL、Poetryをインストールしてください。
+
+<details>
+  <summary>macOSでのインストール方法</summary>
+
+  ```bash
+  brew update
+  brew install python@3.13 postgresql poetry
+  ```
+
+  インストール後、PostgreSQLのバックグラウンドサービスを起動しておきます。
+
+  ```bash
+  brew services start postgresql
+  ```
+</details>
+
 ### 1. バックエンドの依存関係をインストール
 
 ```bash
