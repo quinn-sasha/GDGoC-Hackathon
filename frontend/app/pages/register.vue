@@ -5,6 +5,7 @@ const { register } = useApi();
 const router = useRouter();
 
 const email = ref("");
+const username = ref("");
 const password = ref("");
 const message = ref("");
 const error = ref("");
@@ -15,7 +16,7 @@ const handleSubmit = async () => {
   error.value = "";
   message.value = "";
   try {
-    await register(email.value, password.value);
+    await register(email.value, username.value, password.value);
     message.value = "確認メールを送信しました。メール内のリンクをクリックして認証を完了してください。";
   } catch (e: unknown) {
     const err = e as { data?: Record<string, string[]> };
@@ -49,6 +50,18 @@ const handleSubmit = async () => {
             required
             class="input"
             placeholder="user@example.com"
+          />
+        </div>
+
+        <div class="field">
+          <label class="label">ユーザー名</label>
+          <input
+            v-model="username"
+            type="text"
+            required
+            maxlength="30"
+            class="input"
+            placeholder="ユーザー名を入力"
           />
         </div>
 
