@@ -29,5 +29,9 @@ RUN python manage.py collectstatic --noinput 2>/dev/null || true
 ENV PORT=8080
 EXPOSE ${PORT}
 
-# 起動時にマイグレーションを適用してから gunicorn を起動
-CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT} --workers 2 --threads 4 --timeout 120"]
+# gunicorn で起動
+CMD exec gunicorn config.wsgi:application \
+    --bind 0.0.0.0:${PORT} \
+    --workers 2 \
+    --threads 4 \
+    --timeout 120

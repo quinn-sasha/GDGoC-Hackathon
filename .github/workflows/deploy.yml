@@ -1,23 +1,26 @@
-name: Deploy to Cloud Run
+name: Deploy to GCP
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
 
 env:
-  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-  REGION: asia-northeast1
-  REGISTRY: asia-northeast1-docker.pkg.dev
-  REPOSITORY: gdgoc-hackathon
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION }}
+  REPOSITORY: ${{ secrets.AR_REPOSITORY }}
+  REGISTRY_HOST: asia-northeast1-docker.pkg.dev
 
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
-    outputs:
-      backend_url: ${{ steps.deploy-backend.outputs.url }}
     permissions:
       contents: read
       id-token: write
+    outputs:
+      backend_url: ${{ steps.backend-url.outputs.url }}
+      backend_image: ${{ steps.build-meta.outputs.backend_image }}
 
     steps:
       - uses: actions/checkout@v4
@@ -25,39 +28,148 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
-          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      - name: Normalize environment
+        run: |
+          echo "REGION=${REGION:-asia-northeast1}" >> "$GITHUB_ENV"
+          echo "REPOSITORY=${REPOSITORY:-gdgoc-hackathon}" >> "$GITHUB_ENV"
+
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+        run: gcloud auth configure-docker "${{ env.REGISTRY_HOST }}" --quiet
+
+      - id: build-meta
+        name: Build image metadata
+        run: |
+          BACKEND_IMAGE="${{ env.REGISTRY_HOST }}/${PROJECT_ID}/${REPOSITORY}/backend:${GITHUB_SHA}"
+          echo "backend_image=${BACKEND_IMAGE}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push backend image
         run: |
-          IMAGE=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
-          docker build -t $IMAGE ./backend
-          docker push $IMAGE
+          docker build -t "${{ steps.build-meta.outputs.backend_image }}" ./backend
+          docker push "${{ steps.build-meta.outputs.backend_image }}"
+
+      - name: Create backend env file
+        run: |
+          cat <<EOF > backend-env.yaml
+          DEBUG: "False"
+          SECRET_KEY: "${{ secrets.DJANGO_SECRET_KEY }}"
+          ALLOWED_HOSTS: ".run.app,localhost,127.0.0.1"
+          DB_NAME: "${{ secrets.DB_NAME }}"
+          DB_USER: "${{ secrets.DB_USER }}"
+          DB_PASSWORD: "${{ secrets.DB_PASSWORD }}"
+          DB_SOCKET_DIR: "/cloudsql"
+          CLOUD_SQL_INSTANCE: "${{ secrets.CLOUD_SQL_INSTANCE }}"
+          GOOGLE_CLIENT_ID: "${{ secrets.GOOGLE_CLIENT_ID }}"
+          EMAIL_BACKEND: "django.core.mail.backends.smtp.EmailBackend"
+          EMAIL_HOST: "${{ secrets.EMAIL_HOST }}"
+          EMAIL_PORT: "587"
+          EMAIL_USE_TLS: "True"
+          EMAIL_HOST_USER: "${{ secrets.EMAIL_HOST_USER }}"
+          EMAIL_HOST_PASSWORD: "${{ secrets.EMAIL_HOST_PASSWORD }}"
+          DEFAULT_FROM_EMAIL: "${{ secrets.DEFAULT_FROM_EMAIL }}"
+          FRONTEND_URL: "${{ secrets.FRONTEND_URL }}"
+          EOF
 
       - name: Deploy backend to Cloud Run
-        id: deploy-backend
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: backend
-          region: ${{ env.REGION }}
-          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
-          flags: |
-            --add-cloudsql-instances=${{ vars.CLOUD_SQL_INSTANCE }}
-            --allow-unauthenticated
+        run: |
+          gcloud run deploy backend \
+            --image="${{ steps.build-meta.outputs.backend_image }}" \
+            --region="${REGION}" \
+            --platform=managed \
+            --allow-unauthenticated \
+            --add-cloudsql-instances="${{ secrets.CLOUD_SQL_INSTANCE }}" \
+            --env-vars-file=backend-env.yaml
 
-  deploy-frontend:
+      - id: backend-url
+        name: Read backend URL
+        run: |
+          BACKEND_URL="$(gcloud run services describe backend --region="${REGION}" --format='value(status.url)')"
+          echo "url=${BACKEND_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Update backend public origins from secret
+        if: ${{ secrets.FRONTEND_URL != '' }}
+        run: |
+          gcloud run services update backend \
+            --region="${REGION}" \
+            --update-env-vars="^@^FRONTEND_URL=${{ secrets.FRONTEND_URL }}@CORS_ALLOWED_ORIGINS=${{ secrets.FRONTEND_URL }}@CSRF_TRUSTED_ORIGINS=${{ secrets.FRONTEND_URL }}"
+
+  migrate-database:
     needs: deploy-backend
     runs-on: ubuntu-latest
-    outputs:
-      frontend_url: ${{ steps.deploy-frontend.outputs.url }}
     permissions:
       contents: read
       id-token: write
+
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Normalize environment
+        run: |
+          echo "REGION=${REGION:-asia-northeast1}" >> "$GITHUB_ENV"
+
+      - name: Create or update migration job
+        run: |
+          cat <<EOF > backend-env.yaml
+          DEBUG: "False"
+          SECRET_KEY: "${{ secrets.DJANGO_SECRET_KEY }}"
+          ALLOWED_HOSTS: ".run.app,localhost,127.0.0.1"
+          DB_NAME: "${{ secrets.DB_NAME }}"
+          DB_USER: "${{ secrets.DB_USER }}"
+          DB_PASSWORD: "${{ secrets.DB_PASSWORD }}"
+          DB_SOCKET_DIR: "/cloudsql"
+          CLOUD_SQL_INSTANCE: "${{ secrets.CLOUD_SQL_INSTANCE }}"
+          GOOGLE_CLIENT_ID: "${{ secrets.GOOGLE_CLIENT_ID }}"
+          EMAIL_BACKEND: "django.core.mail.backends.smtp.EmailBackend"
+          EMAIL_HOST: "${{ secrets.EMAIL_HOST }}"
+          EMAIL_PORT: "587"
+          EMAIL_USE_TLS: "True"
+          EMAIL_HOST_USER: "${{ secrets.EMAIL_HOST_USER }}"
+          EMAIL_HOST_PASSWORD: "${{ secrets.EMAIL_HOST_PASSWORD }}"
+          DEFAULT_FROM_EMAIL: "${{ secrets.DEFAULT_FROM_EMAIL }}"
+          FRONTEND_URL: "${{ secrets.FRONTEND_URL }}"
+          EOF
+
+          if gcloud run jobs describe migrate --region="${REGION}" >/dev/null 2>&1; then
+            gcloud run jobs update migrate \
+              --image="${{ needs.deploy-backend.outputs.backend_image }}" \
+              --region="${REGION}" \
+              --add-cloudsql-instances="${{ secrets.CLOUD_SQL_INSTANCE }}" \
+              --env-vars-file=backend-env.yaml \
+              --command=python \
+              --args=manage.py,migrate,--noinput
+          else
+            gcloud run jobs create migrate \
+              --image="${{ needs.deploy-backend.outputs.backend_image }}" \
+              --region="${REGION}" \
+              --add-cloudsql-instances="${{ secrets.CLOUD_SQL_INSTANCE }}" \
+              --env-vars-file=backend-env.yaml \
+              --command=python \
+              --args=manage.py,migrate,--noinput
+          fi
+
+      - name: Execute migration job
+        run: gcloud run jobs execute migrate --region="${REGION}" --wait
+
+  deploy-frontend:
+    needs:
+      - deploy-backend
+      - migrate-database
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      frontend_url: ${{ steps.frontend-url.outputs.url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -65,34 +177,49 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
-          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      - name: Normalize environment
+        run: |
+          echo "REGION=${REGION:-asia-northeast1}" >> "$GITHUB_ENV"
+          echo "REPOSITORY=${REPOSITORY:-gdgoc-hackathon}" >> "$GITHUB_ENV"
+
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+        run: gcloud auth configure-docker "${{ env.REGISTRY_HOST }}" --quiet
+
+      - id: build-meta
+        name: Build image metadata
+        run: |
+          FRONTEND_IMAGE="${{ env.REGISTRY_HOST }}/${PROJECT_ID}/${REPOSITORY}/frontend:${GITHUB_SHA}"
+          echo "frontend_image=${FRONTEND_IMAGE}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push frontend image
         run: |
-          IMAGE=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
           docker build \
-            --build-arg NEXT_PUBLIC_API_BASE=${{ needs.deploy-backend.outputs.backend_url }} \
-            -t $IMAGE \
+            --build-arg NEXT_PUBLIC_API_BASE="${{ needs.deploy-backend.outputs.backend_url }}" \
+            -t "${{ steps.build-meta.outputs.frontend_image }}" \
             ./frontend
-          docker push $IMAGE
+          docker push "${{ steps.build-meta.outputs.frontend_image }}"
 
       - name: Deploy frontend to Cloud Run
-        id: deploy-frontend
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: frontend
-          region: ${{ env.REGION }}
-          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
-          flags: --allow-unauthenticated
+        run: |
+          gcloud run deploy frontend \
+            --image="${{ steps.build-meta.outputs.frontend_image }}" \
+            --region="${REGION}" \
+            --platform=managed \
+            --allow-unauthenticated
+
+      - id: frontend-url
+        name: Read frontend URL
+        run: |
+          FRONTEND_URL="$(gcloud run services describe frontend --region="${REGION}" --format='value(status.url)')"
+          echo "url=${FRONTEND_URL}" >> "$GITHUB_OUTPUT"
 
   configure-backend-public-env:
-    needs: [deploy-backend, deploy-frontend]
+    needs: deploy-frontend
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -102,13 +229,17 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
-          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
       - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Normalize environment
+        run: |
+          echo "REGION=${REGION:-asia-northeast1}" >> "$GITHUB_ENV"
 
       - name: Update backend public environment
         run: |
           gcloud run services update backend \
-            --region=${{ env.REGION }} \
-            --update-env-vars=FRONTEND_URL=${{ needs.deploy-frontend.outputs.frontend_url }},CORS_ALLOWED_ORIGINS=${{ needs.deploy-frontend.outputs.frontend_url }},CSRF_TRUSTED_ORIGINS=${{ needs.deploy-frontend.outputs.frontend_url }}
+            --region="${REGION}" \
+            --update-env-vars="^@^FRONTEND_URL=${{ needs.deploy-frontend.outputs.frontend_url }}@CORS_ALLOWED_ORIGINS=${{ needs.deploy-frontend.outputs.frontend_url }}@CSRF_TRUSTED_ORIGINS=${{ needs.deploy-frontend.outputs.frontend_url }}"
