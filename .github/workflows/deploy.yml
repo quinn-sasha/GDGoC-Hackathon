@@ -46,9 +46,20 @@ jobs:
           service: backend
           region: ${{ env.REGION }}
           image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
+          env_vars: |
+            DEBUG=False
+            ALLOWED_HOSTS=.run.app
+            DB_SOCKET_DIR=/cloudsql
+            CLOUD_SQL_INSTANCE=${{ vars.CLOUD_SQL_INSTANCE }}
+            DB_NAME=${{ vars.DB_NAME }}
+            DB_USER=${{ vars.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}
           flags: |
             --add-cloudsql-instances=${{ vars.CLOUD_SQL_INSTANCE }}
             --allow-unauthenticated
+            --cpu-boost
 
   deploy-frontend:
     needs: deploy-backend
@@ -107,8 +118,8 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Update backend public environment
+      - name: Update backend CORS and CSRF settings
         run: |
           gcloud run services update backend \
             --region=${{ env.REGION }} \
-            --update-env-vars=FRONTEND_URL=${{ needs.deploy-frontend.outputs.frontend_url }},CORS_ALLOWED_ORIGINS=${{ needs.deploy-frontend.outputs.frontend_url }},CSRF_TRUSTED_ORIGINS=${{ needs.deploy-frontend.outputs.frontend_url }}
+            --update-env-vars=^@^FRONTEND_URL=${{ needs.deploy-frontend.outputs.frontend_url }}@CORS_ALLOWED_ORIGINS=${{ needs.deploy-frontend.outputs.frontend_url }}@CSRF_TRUSTED_ORIGINS=${{ needs.deploy-frontend.outputs.frontend_url }}
