@@ -8,11 +8,12 @@ from rest_framework import serializers
 from .models import EmailVerificationToken, User
 
 
-class UserRegistrationSerializer(serializers.Serializer):
+class UserRegistrationSerializer(serializers.ModelSerializer):
     """ユーザー登録シリアライザー"""
+
     class Meta:
         model = User
-        fields = ('email', 'password', 'username')
+        fields = ("email", "password", "username")
 
     email = serializers.EmailField()
     password = serializers.CharField(
@@ -24,19 +25,25 @@ class UserRegistrationSerializer(serializers.Serializer):
 
     def validate_username(self, value):
         if len(value) < 3:
-            raise serializers.ValidationError("ユーザー名は3文字以上で入力してください。")
-        if not re.match(r'^[a-zA-Z0-9_-]+$', value):
-            raise serializers.ValidationError("ユーザーネームには半角英数字、アンダースコア(_)、ハイフン(-)のみが使用できます。")
-        forbitten_usernames = ['admin', 'system', 'root', 'info', 'support', 'contact']
-        if value.lower() in forbitten_usernames:
-            raise serializers.ValidationError("このユーザーネームはシステムで予約されているため使用できません。")
+            raise serializers.ValidationError(
+                "ユーザー名は3文字以上で入力してください。"
+            )
+        if not re.match(r"^[a-zA-Z0-9_-]+$", value):
+            raise serializers.ValidationError(
+                "ユーザーネームには半角英数字、アンダースコア(_)、ハイフン(-)のみが使用できます。"
+            )
+        forbidden_usernames = ["admin", "system", "root", "info", "support", "contact"]
+        if value.lower() in forbidden_usernames:
+            raise serializers.ValidationError(
+                "このユーザーネームはシステムで予約されているため使用できません。"
+            )
         return value
 
     def create(self, validated_data):
         return User.objects.create_user(
             email=validated_data["email"],
             password=validated_data["password"],
-            username=validated_data["username"]
+            username=validated_data["username"],
         )
 
 
@@ -54,7 +61,9 @@ class VerifyEmailSerializer(serializers.Serializer):
             raise serializers.ValidationError("無効なトークンです")
 
         if not verification.is_valid():
-            raise serializers.ValidationError("トークンの有効期限が切れています（24時間以内に確認してください）")
+            raise serializers.ValidationError(
+                "トークンの有効期限が切れています（24時間以内に確認してください）"
+            )
 
         if verification.user.is_active:
             raise serializers.ValidationError("このメールアドレスは既に確認済みです")
@@ -79,7 +88,9 @@ class LoginSerializer(serializers.Serializer):
             password=attrs["password"],
         )
         if not user:
-            raise serializers.ValidationError("メールアドレスまたはパスワードが正しくありません")
+            raise serializers.ValidationError(
+                "メールアドレスまたはパスワードが正しくありません"
+            )
         if not user.is_active:
             raise serializers.ValidationError(
                 "メールアドレスが確認されていません。確認メールをご確認ください"
@@ -104,8 +115,11 @@ class GoogleAuthSerializer(serializers.Serializer):
             raise serializers.ValidationError(f"無効な Google ID トークンです: {e}")
 
         email = idinfo.get("email")
+        username_candidate = idinfo.get("name") or email.split("@")[0]
         if not email:
-            raise serializers.ValidationError("Google アカウントのメールアドレスを取得できませんでした")
-
+            raise serializers.ValidationError(
+                "Google アカウントのメールアドレスを取得できませんでした"
+            )
         self.context["google_email"] = email
+        self.context["google_username"] = username_candidate
         return value
