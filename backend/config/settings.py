@@ -78,6 +78,13 @@ DATABASES = {
     }
 }
 
+# Cloud SQL Unix ソケット接続（DB_SOCKET_DIR が設定されている場合）
+_db_socket_dir = os.getenv("DB_SOCKET_DIR")
+_cloud_sql_instance = os.getenv("CLOUD_SQL_INSTANCE")
+if _db_socket_dir and _cloud_sql_instance:
+    DATABASES["default"]["HOST"] = f"{_db_socket_dir}/{_cloud_sql_instance}"
+    DATABASES["default"]["PORT"] = ""
+
 # カスタムユーザーモデル
 AUTH_USER_MODEL = "accounts.User"
 
@@ -98,6 +105,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -127,11 +135,20 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
-# CORS 設定（フロントエンド localhost:3000 を許可）
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# CORS 設定
+_cors_origins = os.getenv("CORS_ALLOWED_ORIGINS")
+if _cors_origins:
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(",") if o.strip()]
+else:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
+# CSRF 設定（Cloud Run ドメイン等を許可）
+_csrf_origins = os.getenv("CSRF_TRUSTED_ORIGINS")
+if _csrf_origins:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(",") if o.strip()]
 
 # Google OAuth2 クライアント ID
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
