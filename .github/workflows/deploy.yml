@@ -13,6 +13,8 @@ env:
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
+    outputs:
+      backend_url: ${{ steps.deploy-backend.outputs.url }}
     permissions:
       contents: read
       id-token: write
@@ -38,6 +40,7 @@ jobs:
           docker push $IMAGE
 
       - name: Deploy backend to Cloud Run
+        id: deploy-backend
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: backend
@@ -48,7 +51,10 @@ jobs:
             --allow-unauthenticated
 
   deploy-frontend:
+    needs: deploy-backend
     runs-on: ubuntu-latest
+    outputs:
+      frontend_url: ${{ steps.deploy-frontend.outputs.url }}
     permissions:
       contents: read
       id-token: write
@@ -70,13 +76,39 @@ jobs:
       - name: Build and push frontend image
         run: |
           IMAGE=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
-          docker build -t $IMAGE ./frontend
+          docker build \
+            --build-arg NEXT_PUBLIC_API_BASE=${{ needs.deploy-backend.outputs.backend_url }} \
+            -t $IMAGE \
+            ./frontend
           docker push $IMAGE
 
       - name: Deploy frontend to Cloud Run
+        id: deploy-frontend
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: frontend
           region: ${{ env.REGION }}
           image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
           flags: --allow-unauthenticated
+
+  configure-backend-public-env:
+    needs: [deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Update backend public environment
+        run: |
+          gcloud run services update backend \
+            --region=${{ env.REGION }} \
+            --update-env-vars=FRONTEND_URL=${{ needs.deploy-frontend.outputs.frontend_url }},CORS_ALLOWED_ORIGINS=${{ needs.deploy-frontend.outputs.frontend_url }},CSRF_TRUSTED_ORIGINS=${{ needs.deploy-frontend.outputs.frontend_url }}

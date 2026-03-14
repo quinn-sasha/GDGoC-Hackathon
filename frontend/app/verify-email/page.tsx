@@ -2,17 +2,22 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { verifyEmail } from "@/lib/auth-client";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [defaultToken, setDefaultToken] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
 
-  const defaultToken = searchParams.get("token") ?? "";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("token") ?? "";
+  });
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -54,7 +59,8 @@ export default function VerifyEmailPage() {
             name="token"
             type="text"
             placeholder="token"
-            defaultValue={defaultToken}
+            value={defaultToken}
+            onChange={(event) => setDefaultToken(event.target.value)}
             minLength={6}
             required
           />
