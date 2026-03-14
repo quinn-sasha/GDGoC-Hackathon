@@ -269,6 +269,237 @@ Authorization: Bearer <アクセストークン>
 
 アクセストークンの有効期限は **60分**、リフレッシュトークンは **7日**。
 
+## ローカル開発（Docker Compose）
+
+Docker と Docker Compose がインストールされていれば、コマンド1つで起動できる。
+
+```bash
+docker compose up
+```
+
+| サービス | URL |
+|---|---|
+| フロントエンド | http://localhost:3000 |
+| バックエンド API | http://localhost:8000 |
+| PostgreSQL | localhost:5432 |
+
+> ローカルではメール送信が `console` バックエンドになっている。登録すると**バックエンドのログ**に確認メールの内容が出力される。トークンをコピーして `/verify-email?token=xxx` にアクセスすれば認証完了。
+
+```bash
+# バックグラウンドで起動
+docker compose up -d
+
+# ログ確認
+docker compose logs -f backend
+docker compose logs -f frontend
+
+# 停止
+docker compose down
+
+# DBも含めて完全削除
+docker compose down -v
+```
+
+---
+
+## GCP インフラ構成
+
+### 前提条件
+
+- [Google Cloud CLI (`gcloud`)](https://cloud.google.com/sdk/docs/install) がインストール済み
+- GCPプロジェクトが作成済み
+
+```bash
+gcloud auth login
+gcloud config set project <PROJECT_ID>
+```
+
+### 1. 必要な API を有効化
+
+```bash
+gcloud services enable \
+  run.googleapis.com \
+  sqladmin.googleapis.com \
+  artifactregistry.googleapis.com \
+  iam.googleapis.com \
+  iamcredentials.googleapis.com
+```
+
+### 2. Artifact Registry リポジトリ作成
+
+Docker イメージの保存先。
+
+```bash
+gcloud artifacts repositories create gdgoc-hackathon \
+  --repository-format=docker \
+  --location=asia-northeast1
+```
+
+### 3. Cloud SQL（PostgreSQL）作成
+
+```bash
+# インスタンス作成（数分かかる）
+gcloud sql instances create gdgoc-hackathon-db \
+  --database-version=POSTGRES_15 \
+  --tier=db-f1-micro \
+  --region=asia-northeast1
+
+# データベース作成
+gcloud sql databases create google_hackathon_db \
+  --instance=gdgoc-hackathon-db
+
+# アプリ用ユーザー作成（パスワードは任意の値に変更）
+gcloud sql users create app \
+  --instance=gdgoc-hackathon-db \
+  --password=<DB_PASSWORD>
+```
+
+> インスタンスの接続名は `<PROJECT_ID>:asia-northeast1:gdgoc-hackathon-db` になる。
+
+### 4. サービスアカウントと権限設定
+
+GitHub Actions が GCP を操作するためのサービスアカウント。
+
+```bash
+# サービスアカウント作成
+gcloud iam service-accounts create github-actions \
+  --display-name="GitHub Actions"
+
+# 必要な権限を付与
+PROJECT_ID=$(gcloud config get-value project)
+SA="github-actions@${PROJECT_ID}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${SA}" --role="roles/run.admin"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${SA}" --role="roles/artifactregistry.writer"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${SA}" --role="roles/cloudsql.client"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${SA}" --role="roles/iam.serviceAccountUser"
+```
+
+### 5. Workload Identity Federation 設定
+
+サービスアカウントキーを使わずに GitHub Actions から GCP へ認証する仕組み。
+
+```bash
+PROJECT_ID=$(gcloud config get-value project)
+PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')
+REPO="<GitHubのオーナー名>/<リポジトリ名>"  # 例: quinn-sasha/GDGoC-Hackathon
+
+# Workload Identity Pool 作成
+gcloud iam workload-identity-pools create github-pool \
+  --location=global \
+  --display-name="GitHub Actions Pool"
+
+# Provider 作成
+gcloud iam workload-identity-pools providers create-oidc github-provider \
+  --location=global \
+  --workload-identity-pool=github-pool \
+  --display-name="GitHub Provider" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+  --attribute-condition="assertion.repository=='${REPO}'"
+
+# サービスアカウントへのバインド
+SA="github-actions@${PROJECT_ID}.iam.gserviceaccount.com"
+gcloud iam service-accounts add-iam-policy-binding ${SA} \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-pool/attribute.repository/${REPO}"
+
+# Provider のリソース名を確認（後で GitHub Variables に設定する）
+gcloud iam workload-identity-pools providers describe github-provider \
+  --location=global \
+  --workload-identity-pool=github-pool \
+  --format='value(name)'
+```
+
+---
+
+## GitHub Actions 設定
+
+### Variables（公開値）
+
+GitHubリポジトリの **Settings → Secrets and variables → Actions → Variables** で設定する。
+
+| 変数名 | 値 | 説明 |
+|---|---|---|
+| `GCP_PROJECT_ID` | `<PROJECT_ID>` | GCP プロジェクト ID |
+| `WIF_PROVIDER` | `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-pool/providers/github-provider` | Workload Identity Provider のリソース名 |
+| `WIF_SERVICE_ACCOUNT` | `github-actions@<PROJECT_ID>.iam.gserviceaccount.com` | サービスアカウントのメールアドレス |
+| `CLOUD_SQL_INSTANCE` | `<PROJECT_ID>:asia-northeast1:gdgoc-hackathon-db` | Cloud SQL インスタンスの接続名 |
+| `BACKEND_URL` | `https://backend-xxxx-an.a.run.app` | バックエンドの Cloud Run URL（初回デプロイ後に設定） |
+
+### Secrets（機密値）
+
+GitHubリポジトリの **Settings → Secrets and variables → Actions → Secrets** で設定する。
+
+| シークレット名 | 説明 |
+|---|---|
+| `DJANGO_SECRET_KEY` | Django のシークレットキー（ランダムな文字列） |
+| `DB_NAME` | データベース名（例: `google_hackathon_db`） |
+| `DB_USER` | DB ユーザー名（例: `app`） |
+| `DB_PASSWORD` | DB ユーザーのパスワード |
+| `EMAIL_HOST` | SMTP ホスト（Gmail の場合 `smtp.gmail.com`） |
+| `EMAIL_HOST_USER` | 送信用メールアドレス |
+| `EMAIL_HOST_PASSWORD` | Gmail のアプリパスワード（16桁）※通常のパスワードは不可 |
+| `DEFAULT_FROM_EMAIL` | 送信元として表示されるメールアドレス |
+| `GOOGLE_CLIENT_ID` | Google OAuth クライアント ID（Google 認証不要なら空） |
+| `FRONTEND_URL` | フロントエンドの Cloud Run URL（初回デプロイ後に設定） |
+
+> **DJANGO_SECRET_KEY の生成方法:**
+> ```bash
+> python3 -c "import secrets; print(secrets.token_urlsafe(50))"
+> ```
+
+> **Gmail アプリパスワードの取得方法:**
+> 1. Google アカウントで 2 段階認証を有効化
+> 2. https://myaccount.google.com/security の「アプリパスワード」で生成
+
+### デプロイフロー
+
+`main` ブランチへのプッシュで自動的に以下の順で実行される。
+
+```
+push to main
+    │
+    ▼
+[1] deploy-backend       ← Docker ビルド → Artifact Registry → Cloud Run
+    │
+    ▼
+[2] migrate-database     ← Cloud Run Jobs で python manage.py migrate
+    │
+    ▼
+[3] deploy-frontend      ← Docker ビルド（NEXT_PUBLIC_API_BASE を埋め込み）→ Cloud Run
+    │
+    ▼
+[4] configure-backend-public-env  ← バックエンドの CORS をフロントエンド URL に更新
+```
+
+### 初回デプロイ後にやること
+
+初回デプロイが完了したら、Cloud Run の URL を確認して GitHub に追加する。
+
+```bash
+# バックエンド URL 確認
+gcloud run services describe backend --region=asia-northeast1 --format='value(status.url)'
+
+# フロントエンド URL 確認
+gcloud run services describe frontend --region=asia-northeast1 --format='value(status.url)'
+```
+
+確認した URL を以下に設定する：
+- `BACKEND_URL` → GitHub **Variables** に設定
+- `FRONTEND_URL` → GitHub **Secrets** に設定
+
+設定後、もう一度 `main` にプッシュ（または GitHub Actions から手動実行）してデプロイし直す。
+
+---
+
 ## プロジェクト構成
 
 ```text
