@@ -11,7 +11,7 @@ from .models import EmailVerificationToken, User
 from .serializers import (
     GoogleAuthSerializer,
     LoginSerializer,
-    RegisterSerializer,
+    UserRegistrationSerializer,
     VerifyEmailSerializer,
 )
 
@@ -32,23 +32,20 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        request=RegisterSerializer,
+        request=UserRegistrationSerializer,
         responses={
             201: OpenApiResponse(description="確認メールを送信しました"),
             400: OpenApiResponse(description="バリデーションエラー"),
         },
         summary="ユーザー登録",
-        description="メールアドレスとパスワードでユーザーを登録し、確認メールを送信します。",
+        description="メールアドレス、ユーザー名とパスワードでユーザーを登録し、確認メールを送信します。",
     )
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        serializer = UserRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         user = serializer.save()
-
         # 確認トークン生成
         verification = EmailVerificationToken.objects.create(user=user)
-
         # 確認メール送信
         verify_url = f"{settings.FRONTEND_URL}/verify-email?token={verification.token}"
         send_mail(
@@ -62,9 +59,10 @@ class RegisterView(APIView):
             recipient_list=[user.email],
             fail_silently=False,
         )
-
         return Response(
-            {"message": "確認メールを送信しました。メール内のリンクで認証を完了してください。"},
+            {
+                "message": "確認メールを送信しました。メール内のリンクで認証を完了してください。"
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -119,9 +117,7 @@ class LoginView(APIView):
         description="メールアドレスとパスワードで認証し、JWT を発行します。",
     )
     def post(self, request):
-        serializer = LoginSerializer(
-            data=request.data, context={"request": request}
-        )
+        serializer = LoginSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         user = serializer.validated_data["user"]
@@ -150,9 +146,11 @@ class GoogleAuthView(APIView):
         serializer.is_valid(raise_exception=True)
 
         email = serializer.context["google_email"]
-
+        username_candidate = serializer.context["google_username"]
+        # TODO: usernameがユニークであるかどうか検証する
         # ユーザー作成 or 取得（Google 認証ではパスワード不要）
         user, created = User.objects.get_or_create(
+            username=username_candidate,
             email=email,
             defaults={"is_active": True},
         )
@@ -164,5 +162,4 @@ class GoogleAuthView(APIView):
             # 既存ユーザーが未アクティブの場合はアクティブ化
             user.is_active = True
             user.save()
-
         return Response(get_tokens_for_user(user), status=status.HTTP_200_OK)
