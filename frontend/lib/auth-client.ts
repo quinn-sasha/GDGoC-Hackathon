@@ -30,7 +30,7 @@ async function postJson<TPayload>(
   url: string,
   payload: TPayload,
 ): Promise<AuthApiResult> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? "";
+  const baseUrl = "http://localhost:8000";
   const requestUrl = `${baseUrl}${url}`;
 
   const response = await fetch(requestUrl, {
