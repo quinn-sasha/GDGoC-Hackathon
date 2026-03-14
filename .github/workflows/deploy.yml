@@ -186,7 +186,7 @@ jobs:
       - name: Build and push frontend image
         run: |
           docker build \
-            --build-arg NEXT_PUBLIC_API_BASE="${{ needs.deploy-backend.outputs.backend_url }}" \
+            --build-arg NEXT_PUBLIC_API_BASE="${{ vars.BACKEND_URL }}" \
             -t "${{ steps.build-meta.outputs.frontend_image }}" \
             ./frontend
           docker push "${{ steps.build-meta.outputs.frontend_image }}"
