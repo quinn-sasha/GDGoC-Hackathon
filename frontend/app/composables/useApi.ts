@@ -18,11 +18,11 @@ export const useApi = () => {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
-  const register = (email: string, password: string) =>
+  const register = (email: string, username: string, password: string) =>
     $fetch<{ message: string }>("/api/auth/register", {
       baseURL,
       method: "POST",
-      body: { email, password },
+      body: { email, username, password },
     });
 
   const verifyEmail = (token: string) =>

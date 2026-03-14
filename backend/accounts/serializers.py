@@ -16,6 +16,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         fields = ("email", "password", "username")
 
     email = serializers.EmailField()
+    username = serializers.CharField(max_length=30)
     password = serializers.CharField(
         write_only=True,
         required=True,
@@ -39,9 +40,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("このユーザー名は既に使用されています")
+        return value
+
     def create(self, validated_data):
         return User.objects.create_user(
             email=validated_data["email"],
+            username=validated_data["username"],
             password=validated_data["password"],
             username=validated_data["username"],
         )
