@@ -8,6 +8,7 @@ type ApiErrorBody = {
   message?: string;
   detail?: string;
   non_field_errors?: string[];
+  [key: string]: unknown;
 };
 
 type LoginPayload = {
@@ -25,6 +26,19 @@ type RegisterPayload = {
 type VerifyEmailPayload = {
   token: string;
 };
+
+function extractMessage(data: ApiErrorBody | null): string {
+  if (!data) return "Request failed.";
+  if (data.message) return String(data.message);
+  if (data.detail) return String(data.detail);
+  if (data.non_field_errors?.[0]) return String(data.non_field_errors[0]);
+  // フィールドエラー（例: {"email": ["既に存在します"]}）の最初のメッセージを返す
+  for (const key of Object.keys(data)) {
+    const val = data[key];
+    if (Array.isArray(val) && typeof val[0] === "string") return val[0];
+  }
+  return "Request failed.";
+}
 
 async function postJson<TPayload>(
   url: string,
@@ -44,9 +58,7 @@ async function postJson<TPayload>(
   });
 
   const data = (await response.json().catch(() => null)) as ApiErrorBody | null;
-  const messageFromArray = data?.non_field_errors?.[0];
-  const message =
-    data?.message ?? data?.detail ?? messageFromArray ?? "Request failed.";
+  const message = extractMessage(data);
 
   return {
     ok: response.ok && (data?.ok ?? true),
