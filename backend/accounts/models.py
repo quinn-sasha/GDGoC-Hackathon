@@ -1,4 +1,4 @@
-import uuid6
+import uuid
 
 from django.contrib.auth.models import (
     AbstractBaseUser,
@@ -6,10 +6,6 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.db import models
-
-# TODO: 適切なヘルパー関数用のファイルに定義を書く
-def generate_uuid7():
-    return uuid6.uuid7()
 
 class UserManager(BaseUserManager):
     """カスタムユーザーマネージャー（email で認証）"""
@@ -32,20 +28,23 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    id = models.UUIDField(primary_key=True, default=generate_uuid7(), editable=False)
     username = models.CharField(max_length=30, unique=True)
-    email = models.EmailField(unique=True)
-    profile_bio = models.CharField(max_length=160, null=True, blank=True)
-    github_url = models.URLField(null=True, blank=True)
-    icon_image_path = models.CharField(max_length=255, null=True, blank=True)  # just store path, not full URL
-    is_active = models.BooleanField(default=False, help_text="Became True after verified")
-    is_staff = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    email = models.EmailField("メールアドレス", unique=True)
+    is_active = models.BooleanField(
+        "アクティブ",
+        default=False,
+        help_text="メール確認後に True になります",
+    )
+    is_staff = models.BooleanField("スタッフ権限", default=False)
+    date_joined = models.DateTimeField("登録日時", auto_now_add=True)
 
     objects = UserManager()
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = ["username"]
+
+    class Meta:
+        verbose_name = "ユーザー"
+        verbose_name_plural = "ユーザー"
 
     def __str__(self):
         return self.username
@@ -53,9 +52,18 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class EmailVerificationToken(models.Model):
     """メール確認トークン（有効期限 24時間）"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="verification_token")
-    token = models.UUIDField(default=generate_uuid7(), unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="verification_token",
+        verbose_name="ユーザー",
+    )
+    token = models.UUIDField("トークン", default=uuid.uuid4, unique=True)
+    created_at = models.DateTimeField("作成日時", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "メール確認トークン"
+        verbose_name_plural = "メール確認トークン"
 
     def __str__(self):
         return f"{self.user.email} - {self.token}"
