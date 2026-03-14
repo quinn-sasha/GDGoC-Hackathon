@@ -135,7 +135,7 @@ jobs:
             gcloud run jobs update migrate \
               --image="${{ needs.deploy-backend.outputs.backend_image }}" \
               --region="${{ env.REGION }}" \
-              --add-cloudsql-instances="${{ vars.CLOUD_SQL_INSTANCE }}" \
+              --set-cloudsql-instances="${{ vars.CLOUD_SQL_INSTANCE }}" \
               --env-vars-file=backend-env.yaml \
               --command=python \
               --args=manage.py,migrate,--noinput
@@ -143,7 +143,7 @@ jobs:
             gcloud run jobs create migrate \
               --image="${{ needs.deploy-backend.outputs.backend_image }}" \
               --region="${{ env.REGION }}" \
-              --add-cloudsql-instances="${{ vars.CLOUD_SQL_INSTANCE }}" \
+              --set-cloudsql-instances="${{ vars.CLOUD_SQL_INSTANCE }}" \
               --env-vars-file=backend-env.yaml \
               --command=python \
               --args=manage.py,migrate,--noinput
