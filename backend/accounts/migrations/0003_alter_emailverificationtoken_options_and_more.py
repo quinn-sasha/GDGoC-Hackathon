@@ -22,25 +22,37 @@ class Migration(migrations.Migration):
             name='user',
             options={'verbose_name': 'ユーザー', 'verbose_name_plural': 'ユーザー'},
         ),
-        migrations.RemoveField(
-            model_name='user',
-            name='created_at',
-        ),
-        migrations.RemoveField(
-            model_name='user',
-            name='github_url',
-        ),
-        migrations.RemoveField(
-            model_name='user',
-            name='icon_image_path',
-        ),
-        migrations.RemoveField(
-            model_name='user',
-            name='profile_bio',
-        ),
-        migrations.RemoveField(
-            model_name='user',
-            name='updated_at',
+        # 本番DBにカラムが存在しない場合も安全に通過できるよう IF EXISTS を使用
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.RemoveField(model_name='user', name='created_at'),
+                migrations.RemoveField(model_name='user', name='github_url'),
+                migrations.RemoveField(model_name='user', name='icon_image_path'),
+                migrations.RemoveField(model_name='user', name='profile_bio'),
+                migrations.RemoveField(model_name='user', name='updated_at'),
+            ],
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE accounts_user DROP COLUMN IF EXISTS created_at",
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+                migrations.RunSQL(
+                    sql="ALTER TABLE accounts_user DROP COLUMN IF EXISTS github_url",
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+                migrations.RunSQL(
+                    sql="ALTER TABLE accounts_user DROP COLUMN IF EXISTS icon_image_path",
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+                migrations.RunSQL(
+                    sql="ALTER TABLE accounts_user DROP COLUMN IF EXISTS profile_bio",
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+                migrations.RunSQL(
+                    sql="ALTER TABLE accounts_user DROP COLUMN IF EXISTS updated_at",
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+            ],
         ),
         migrations.AddField(
             model_name='user',
