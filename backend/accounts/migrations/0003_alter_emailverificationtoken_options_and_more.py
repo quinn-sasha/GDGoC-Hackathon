@@ -54,11 +54,22 @@ class Migration(migrations.Migration):
                 ),
             ],
         ),
-        migrations.AddField(
-            model_name='user',
-            name='date_joined',
-            field=models.DateTimeField(auto_now_add=True, default=datetime.datetime(2026, 3, 14, 23, 11, 12, 482230, tzinfo=datetime.timezone.utc), verbose_name='登録日時'),
-            preserve_default=False,
+        # 本番DBに date_joined が既に存在する場合も安全に通過できるよう IF NOT EXISTS を使用
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddField(
+                    model_name='user',
+                    name='date_joined',
+                    field=models.DateTimeField(auto_now_add=True, default=datetime.datetime(2026, 3, 14, 23, 11, 12, 482230, tzinfo=datetime.timezone.utc), verbose_name='登録日時'),
+                    preserve_default=False,
+                ),
+            ],
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS date_joined TIMESTAMPTZ NOT NULL DEFAULT '2026-03-14 23:11:12.48223+00'",
+                    reverse_sql="ALTER TABLE accounts_user DROP COLUMN IF EXISTS date_joined",
+                ),
+            ],
         ),
         migrations.AlterField(
             model_name='emailverificationtoken',
