@@ -50,7 +50,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             email=validated_data["email"],
             username=validated_data["username"],
             password=validated_data["password"],
-            username=validated_data["username"],
         )
 
 
