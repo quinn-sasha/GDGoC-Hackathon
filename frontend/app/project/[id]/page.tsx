@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-import { HOME_UPDATES } from "@/lib/mock-data";
+import { HOME_FEATURED, HOME_UPDATES } from "@/lib/mock-data";
+import { buildProjectImage } from "@/lib/project-image";
 
 const STATUS_LABELS: Record<string, string> = {
   ONGOING: "進行中",
@@ -30,7 +32,23 @@ export default function ProjectDetailPage() {
   const router = useRouter();
   const projectId = Number(params.id);
 
-  const project = HOME_UPDATES.find((item) => item.id === projectId);
+  const updateProject = HOME_UPDATES.find((item) => item.id === projectId);
+  const featuredProject = HOME_FEATURED.id === projectId
+    ? {
+        id: HOME_FEATURED.id,
+        title: HOME_FEATURED.title,
+        status: HOME_FEATURED.badge,
+        statusColor: HOME_FEATURED.statusColor,
+        statusBg: HOME_FEATURED.statusBg,
+        time: HOME_FEATURED.time,
+        description: HOME_FEATURED.description,
+        author: HOME_FEATURED.hostName,
+        category: HOME_FEATURED.category,
+        avatarInitial: HOME_FEATURED.hostInitial,
+      }
+    : null;
+
+  const project = updateProject ?? featuredProject;
 
   if (!project) {
     return (
@@ -109,44 +127,84 @@ export default function ProjectDetailPage() {
       </header>
 
       <section style={{ padding: "22px 20px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "52px minmax(0, 1fr) auto",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #f9a8a8 0%, #d47fa6 100%)",
+              display: "grid",
+              placeItems: "center",
+              color: "#ffffff",
+              fontSize: "1rem",
+              fontWeight: 800,
+              flexShrink: 0,
+            }}
+          >
+            {project.avatarInitial}
+          </div>
+
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ margin: 0, fontSize: "1.25rem", lineHeight: 1.35 }}>{project.title}</h1>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, color: "#9f9f9f", fontSize: "0.8rem" }}>
+              <span>ホスト: {toDisplayName(project.author)}</span>
+              <span>カテゴリ: {project.category}</span>
+            </div>
+          </div>
+
           <span
             style={{
               borderRadius: 999,
               background: project.statusBg,
               color: project.statusColor,
               border: `1px solid ${project.statusBg}`,
-              padding: "4px 10px",
+              padding: "5px 10px",
               fontSize: "0.72rem",
               fontWeight: 700,
               letterSpacing: "0.06em",
+              whiteSpace: "nowrap",
             }}
           >
             {translateStatus(project.status)}
           </span>
-          <span style={{ color: "#777777", fontSize: "0.78rem" }}>{project.time}</span>
         </div>
 
-        <h1 style={{ margin: "14px 0 0", fontSize: "1.4rem", lineHeight: 1.35 }}>{project.title}</h1>
+        <div style={{ marginTop: 18 }}>
+          <Image
+            src={buildProjectImage(project.title, project.category)}
+            alt={`${project.title} のイメージ`}
+            width={1200}
+            height={720}
+            style={{
+              display: "block",
+              width: "100%",
+              height: 220,
+              objectFit: "cover",
+              borderRadius: 20,
+              border: "1px solid #2a2a2a",
+              background: "#1a1a1a",
+            }}
+          />
+        </div>
 
-        <p style={{ margin: "16px 0 0", color: "#cccccc", lineHeight: 1.7, fontSize: "0.94rem" }}>
+        <p style={{ margin: "18px 0 0", color: "#cccccc", lineHeight: 1.8, fontSize: "0.96rem" }}>
           {project.description}
         </p>
 
-        <div
-          style={{
-            marginTop: 22,
-            border: "1px solid #2a2a2a",
-            borderRadius: 16,
-            background: "#1a1a1a",
-            padding: "14px 16px",
-          }}
-        >
-          <p style={{ margin: 0, color: "#888888", fontSize: "0.74rem", letterSpacing: "0.04em" }}>担当</p>
-          <p style={{ margin: "8px 0 0", fontSize: "0.95rem", fontWeight: 700 }}>{toDisplayName(project.author)}</p>
-
-          <p style={{ margin: "14px 0 0", color: "#888888", fontSize: "0.74rem", letterSpacing: "0.04em" }}>カテゴリ</p>
-          <p style={{ margin: "8px 0 0", fontSize: "0.95rem", fontWeight: 700 }}>{project.category}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 18, color: "#888888", fontSize: "0.82rem" }}>
+          <span>{toDisplayName(project.author)}</span>
+          <span>・</span>
+          <span>{project.category}</span>
+          <span>・</span>
+          <span>{project.time}</span>
         </div>
       </section>
     </main>
