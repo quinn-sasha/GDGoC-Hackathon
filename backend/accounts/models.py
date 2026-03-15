@@ -30,6 +30,9 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=30, unique=True)
     email = models.EmailField("メールアドレス", unique=True)
+    profile_bio = models.CharField("プロフィール文", max_length=160, blank=True, default="")
+    github_url = models.CharField("GitHub URL", max_length=255, blank=True, default="")
+    icon_image_path = models.CharField("アイコン画像パス", max_length=255, blank=True, default="")
     is_active = models.BooleanField(
         "アクティブ",
         default=False,
@@ -37,6 +40,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     is_staff = models.BooleanField("スタッフ権限", default=False)
     date_joined = models.DateTimeField("登録日時", auto_now_add=True)
+    updated_at = models.DateTimeField("更新日時", auto_now=True)
 
     objects = UserManager()
     USERNAME_FIELD = "email"
