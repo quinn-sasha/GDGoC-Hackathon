@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   HOME_CATEGORIES,
   HOME_FEATURED,
@@ -11,6 +11,56 @@ import {
   type HomeUpdate,
 } from "@/lib/mock-data";
 import { fetchHomeFeed } from "@/lib/home-client";
+
+const CATEGORY_LABELS: Record<string, string> = {
+  All: "すべて",
+  Design: "デザイン",
+  Tech: "技術",
+  Art: "アート",
+  Music: "音楽",
+  Film: "映像",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  ONGOING: "進行中",
+  FEATURED: "注目",
+  "IN REVIEW": "レビュー中",
+  COMPLETED: "完了",
+  DRAFT: "下書き",
+};
+
+function translateCategory(category: string) {
+  return CATEGORY_LABELS[category] ?? category;
+}
+
+function translateStatus(status: string) {
+  return STATUS_LABELS[status] ?? status;
+}
+
+function translateRelativeTime(value: string) {
+  if (/^(\d+)h ago$/i.test(value)) {
+    return value.replace(/^(\d+)h ago$/i, "$1時間前");
+  }
+  if (/^(\d+)m ago$/i.test(value)) {
+    return value.replace(/^(\d+)m ago$/i, "$1分前");
+  }
+  if (/^(\d+) min read$/i.test(value)) {
+    return value.replace(/^(\d+) min read$/i, "$1分で読める");
+  }
+  if (value === "Yesterday") {
+    return "昨日";
+  }
+
+  return value;
+}
+
+function isAllCategory(category: string) {
+  return category === "All" || category === "すべて";
+}
+
+function getAllCategory(categories: string[]) {
+  return categories.find((category) => isAllCategory(category)) ?? categories[0] ?? "すべて";
+}
 
 const S = {
   root: {
@@ -328,13 +378,16 @@ const S = {
 };
 
 export default function HomePage() {
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState(HOME_CATEGORIES[0] ?? "すべて");
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState<string[]>(HOME_CATEGORIES);
   const [featured, setFeatured] = useState<HomeFeatured>(HOME_FEATURED);
   const [updates, setUpdates] = useState<HomeUpdate[]>(HOME_UPDATES);
   const [fetchError, setFetchError] = useState("");
+  const [showAllUpdates, setShowAllUpdates] = useState(false);
   const router = useRouter();
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const updatesSectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -353,14 +406,14 @@ export default function HomePage() {
         setFeatured(data.featured ?? HOME_FEATURED);
         setUpdates(Array.isArray(data.updates) ? data.updates : HOME_UPDATES);
         setActiveCategory((prev) =>
-          nextCategories.includes(prev) ? prev : (nextCategories[0] ?? "All"),
+          nextCategories.includes(prev) ? prev : (nextCategories[0] ?? HOME_CATEGORIES[0] ?? "すべて"),
         );
         setFetchError("");
       } catch {
         if (!isMounted) {
           return;
         }
-        setFetchError("Could not sync latest updates. Showing saved data.");
+        setFetchError("最新の更新を同期できませんでした。保存済みデータを表示しています。");
       }
     };
 
@@ -373,7 +426,7 @@ export default function HomePage() {
 
   const filteredUpdates = updates.filter((u) => {
     const matchesCategory =
-      activeCategory === "All" || u.categoryTag === activeCategory;
+      isAllCategory(activeCategory) || u.categoryTag === activeCategory;
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       q === "" ||
@@ -382,6 +435,28 @@ export default function HomePage() {
       u.author.toLowerCase().includes(q);
     return matchesCategory && matchesSearch;
   });
+
+  const visibleUpdates = showAllUpdates
+    ? filteredUpdates
+    : filteredUpdates.slice(0, 2);
+
+  const handleViewAll = () => {
+    setShowAllUpdates(true);
+    setSearchQuery("");
+    setActiveCategory(getAllCategory(categories));
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      updatesSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const handleCloseAllUpdates = () => {
+    setShowAllUpdates(false);
+  };
 
   return (
     <div style={S.root}>
@@ -405,7 +480,7 @@ export default function HomePage() {
         <input
           style={S.searchInput}
           type="search"
-          placeholder="Search projects, ideas, or creators..."
+          placeholder="プロジェクト、アイデア、クリエイターを検索"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -425,59 +500,68 @@ export default function HomePage() {
             style={activeCategory === cat ? S.catActive : S.catBase}
             onClick={() => setActiveCategory(cat)}
           >
-            {cat}
+            {translateCategory(cat)}
           </button>
         ))}
       </div>
 
-      <div style={S.scroll}>
-        {/* Recommended */}
-        <section style={S.section}>
-          <p style={S.sectionLabel}>RECOMMENDED FOR YOU</p>
-          <div style={S.featured}>
-            <span style={S.badgeOngoing}>{featured.badge}</span>
-            <div style={S.featuredBottom}>
-              <div style={S.featuredTags}>
-                <span style={S.badgeBlue}>{featured.label}</span>
-                <span style={S.readTime}>{featured.readTime}</span>
-              </div>
-              <h2 style={S.featuredTitle}>{featured.title}</h2>
-              <p style={S.featuredDesc}>{featured.description}</p>
-              <div style={S.featuredHost}>
-                <div style={S.avatarSm}>{featured.hostInitial}</div>
-                <span>{featured.hostName}</span>
+      <div ref={scrollContainerRef} style={S.scroll}>
+        {!showAllUpdates ? (
+          <section style={S.section}>
+            <p style={S.sectionLabel}>あなたへのおすすめ</p>
+            <div style={S.featured}>
+              <span style={S.badgeOngoing}>{translateStatus(featured.badge)}</span>
+              <div style={S.featuredBottom}>
+                <div style={S.featuredTags}>
+                  <span style={S.badgeBlue}>{translateStatus(featured.label)}</span>
+                  <span style={S.readTime}>{translateRelativeTime(featured.readTime)}</span>
+                </div>
+                <h2 style={S.featuredTitle}>{featured.title}</h2>
+                <p style={S.featuredDesc}>{featured.description}</p>
+                <div style={S.featuredHost}>
+                  <div style={S.avatarSm}>{featured.hostInitial}</div>
+                  <span>{featured.hostName}</span>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        ) : null}
 
         {/* Latest Updates */}
-        <section style={S.section}>
+        <section ref={updatesSectionRef} style={S.section}>
           <div style={S.sectionRow}>
-            <h3 style={S.sectionTitle}>Latest Updates</h3>
-            <a href="#" style={S.viewAll}>View all</a>
+            <h3 style={S.sectionTitle}>{showAllUpdates ? "最近の更新プロジェクト" : "最新の更新"}</h3>
+            {showAllUpdates ? (
+              <button type="button" style={{ ...S.viewAll, background: "none", border: "none", cursor: "pointer" }} onClick={handleCloseAllUpdates}>
+                閉じる
+              </button>
+            ) : (
+              <button type="button" style={{ ...S.viewAll, background: "none", border: "none", cursor: "pointer" }} onClick={handleViewAll}>
+                すべて見る
+              </button>
+            )}
           </div>
           <div style={S.updates}>
-            {filteredUpdates.length === 0 ? (
+            {visibleUpdates.length === 0 ? (
               <p style={{ color: "#666666", fontSize: "0.88rem", textAlign: "center", padding: "24px 0" }}>
-                No updates found.
+                条件に一致する更新はありません。
               </p>
             ) : (
-              filteredUpdates.map((u) => (
+              visibleUpdates.map((u) => (
               <article key={u.id} style={S.card}>
                 <div style={S.cardTop}>
                   <h4 style={S.cardTitle}>{u.title}</h4>
                   <div style={S.cardRight}>
                     <span style={S.statusBadge(u.statusColor, u.statusBg)}>
-                      {u.status}
+                      {translateStatus(u.status)}
                     </span>
-                    <span style={S.cardTime}>{u.time}</span>
+                    <span style={S.cardTime}>{translateRelativeTime(u.time)}</span>
                   </div>
                 </div>
                 <p style={S.cardDesc}>{u.description}</p>
                 <div style={S.cardMeta}>
                   <span style={S.cardAuthorLeft}>
-                    BY {u.author} · {u.category}
+                    {u.author} ・ {translateCategory(u.category)}
                   </span>
                   <div style={S.cardAuthorRight}>
                     <div style={S.avatarSm}>{u.avatarInitial}</div>
@@ -502,20 +586,20 @@ export default function HomePage() {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
           </svg>
-          <span>Home</span>
+          <span>ホーム</span>
         </button>
         <button style={S.navItem} onClick={() => router.push("/chat")}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
-          <span>Chat</span>
+          <span>チャット</span>
         </button>
         <button style={S.navItem} onClick={() => router.push("/profile")}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
-          <span>Profile</span>
+          <span>プロフィール</span>
         </button>
       </nav>
     </div>

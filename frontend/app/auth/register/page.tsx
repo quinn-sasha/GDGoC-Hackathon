@@ -23,7 +23,7 @@ export default function RegisterPage() {
     const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
 
     if (password !== passwordConfirm) {
-      setErrorMessage("Passwords do not match.");
+      setErrorMessage("パスワードが一致しません。");
       setIsSubmitting(false);
       return;
     }
@@ -37,7 +37,7 @@ export default function RegisterPage() {
     }
 
     setSuccessMessage(
-      "Registration complete. Please check your email and verify your account.",
+      "登録が完了しました。メールを確認してアカウント認証を行ってください。",
     );
     event.currentTarget.reset();
     setIsSubmitting(false);
@@ -46,14 +46,14 @@ export default function RegisterPage() {
   return (
     <main className="login-shell">
       <section className="login-card" aria-labelledby="register-title">
-        <p className="login-kicker">Create Account</p>
-        <h1 id="register-title">Register with your email</h1>
+        <p className="login-kicker">アカウント作成</p>
+        <h1 id="register-title">メールアドレスで登録</h1>
         <p className="login-subtitle">
-          We will send a verification email after successful registration.
+          登録完了後に確認メールをお送りします。
         </p>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">メールアドレス</label>
           <input
             id="email"
             name="email"
@@ -63,7 +63,7 @@ export default function RegisterPage() {
             required
           />
 
-          <label htmlFor="username">Username</label>
+          <label htmlFor="username">ユーザー名</label>
           <input
             id="username"
             name="username"
@@ -75,32 +75,32 @@ export default function RegisterPage() {
             required
           />
 
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">パスワード</label>
           <input
             id="password"
             name="password"
             type="password"
             autoComplete="new-password"
-            placeholder="8 to 32 characters"
+            placeholder="8〜32文字"
             minLength={8}
             maxLength={32}
             required
           />
 
-          <label htmlFor="passwordConfirm">Confirm Password</label>
+          <label htmlFor="passwordConfirm">パスワード（確認）</label>
           <input
             id="passwordConfirm"
             name="passwordConfirm"
             type="password"
             autoComplete="new-password"
-            placeholder="Re-enter your password"
+            placeholder="パスワードを再入力"
             minLength={8}
             maxLength={32}
             required
           />
 
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create account"}
+            {isSubmitting ? "登録中..." : "アカウントを作成"}
           </button>
         </form>
 
@@ -117,9 +117,9 @@ export default function RegisterPage() {
         ) : null}
 
         <p className="signup-note">
-          Already have an account?{" "}
+          すでにアカウントをお持ちの方は{" "}
           <Link href="/auth/login" className="text-link">
-            Back to login
+            サインインへ
           </Link>
         </p>
       </section>

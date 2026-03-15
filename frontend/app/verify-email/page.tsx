@@ -36,7 +36,7 @@ export default function VerifyEmailPage() {
       return;
     }
 
-    setSuccessMessage("Email verified. Redirecting to home...");
+    setSuccessMessage("メール認証が完了しました。ホームへ移動します...");
     setTimeout(() => {
       router.push("/home");
     }, 700);
@@ -46,19 +46,19 @@ export default function VerifyEmailPage() {
   return (
     <main className="login-shell">
       <section className="login-card" aria-labelledby="verify-title">
-        <p className="login-kicker">Verification</p>
-        <h1 id="verify-title">Verify your email</h1>
+        <p className="login-kicker">メール認証</p>
+        <h1 id="verify-title">メールアドレスを認証する</h1>
         <p className="login-subtitle">
-          Paste your verification token or open this page from your email link.
+          認証トークンを入力するか、メールのリンクからこのページを開いてください。
         </p>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          <label htmlFor="token">Verification token</label>
+          <label htmlFor="token">認証トークン</label>
           <input
             id="token"
             name="token"
             type="text"
-            placeholder="token"
+            placeholder="トークンを入力"
             value={defaultToken}
             onChange={(event) => setDefaultToken(event.target.value)}
             minLength={6}
@@ -66,7 +66,7 @@ export default function VerifyEmailPage() {
           />
 
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Verifying..." : "Verify email"}
+            {isSubmitting ? "認証中..." : "メールを認証する"}
           </button>
         </form>
 
@@ -83,9 +83,9 @@ export default function VerifyEmailPage() {
         ) : null}
 
         <p className="signup-note">
-          Need to register first?{" "}
+          アカウントをお持ちでない方は{" "}
           <Link href="/auth/register" className="text-link">
-            Go to register
+            新規登録
           </Link>
         </p>
       </section>
