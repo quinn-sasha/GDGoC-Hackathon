@@ -458,6 +458,10 @@ export default function HomePage() {
     setShowAllUpdates(false);
   };
 
+  const handleOpenProjectDetail = (projectId: number) => {
+    router.push(`/project/${projectId}`);
+  };
+
   return (
     <div style={S.root}>
       {/* Header */}
@@ -548,7 +552,20 @@ export default function HomePage() {
               </p>
             ) : (
               visibleUpdates.map((u) => (
-              <article key={u.id} style={S.card}>
+              <article
+                key={u.id}
+                style={{ ...S.card, cursor: "pointer" }}
+                onClick={() => handleOpenProjectDetail(u.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleOpenProjectDetail(u.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`${u.title} の詳細へ移動`}
+              >
                 <div style={S.cardTop}>
                   <h4 style={S.cardTitle}>{u.title}</h4>
                   <div style={S.cardRight}>
@@ -605,4 +622,5 @@ export default function HomePage() {
     </div>
   );
 }
+
 
