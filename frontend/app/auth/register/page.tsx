@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { FormEvent, useState } from "react";
+
 import { register } from "@/lib/auth-client";
 
 export default function RegisterPage() {
@@ -117,7 +118,7 @@ export default function RegisterPage() {
 
         <p className="signup-note">
           Already have an account?{" "}
-          <Link href="/login" className="text-link">
+          <Link href="/auth/login" className="text-link">
             Back to login
           </Link>
         </p>

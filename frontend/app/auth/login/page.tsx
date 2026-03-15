@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FormEvent, useState } from "react";
+
 import { login } from "@/lib/auth-client";
 
 export default function LoginPage() {
@@ -30,7 +31,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push("/home");
     } catch {
       setErrorMessage("Network error. Please try again.");
     } finally {
@@ -94,7 +95,7 @@ export default function LoginPage() {
 
         <p className="signup-note">
           New here?{" "}
-          <Link href="/register" className="text-link">
+          <Link href="/auth/register" className="text-link">
             Create an account
           </Link>
         </p>
