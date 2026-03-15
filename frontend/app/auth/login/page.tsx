@@ -33,7 +33,7 @@ export default function LoginPage() {
 
       router.push("/home");
     } catch {
-      setErrorMessage("Network error. Please try again.");
+      setErrorMessage("通信エラーが発生しました。時間をおいて再試行してください。");
     } finally {
       setIsSubmitting(false);
     }
@@ -42,14 +42,10 @@ export default function LoginPage() {
   return (
     <main className="login-shell">
       <section className="login-card" aria-labelledby="login-title">
-        <p className="login-kicker">Welcome Back</p>
-        <h1 id="login-title">Sign in to your account</h1>
-        <p className="login-subtitle">
-          Continue with your email and password to access the dashboard.
-        </p>
+        <h1 id="login-title">アカウントにサインイン</h1>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">メールアドレス</label>
           <input
             id="email"
             name="email"
@@ -59,31 +55,31 @@ export default function LoginPage() {
             required
           />
 
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">パスワード</label>
           <input
             id="password"
             name="password"
             type="password"
             autoComplete="current-password"
-            placeholder="Enter your password"
+            placeholder="パスワードを入力"
             minLength={8}
             maxLength={32}
-            title="Password must be 8 to 32 characters"
+            title="パスワードは8〜32文字で入力してください"
             required
           />
 
           <div className="login-row">
             <label className="remember-wrap" htmlFor="remember">
               <input id="remember" name="remember" type="checkbox" />
-              Remember me
+              ログイン状態を保持する
             </label>
             <Link href="/verify-email" className="text-link">
-              Verify email
+              メール認証
             </Link>
           </div>
 
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Signing in..." : "Sign In"}
+            {isSubmitting ? "サインイン中..." : "サインイン"}
           </button>
         </form>
 
@@ -94,9 +90,9 @@ export default function LoginPage() {
         ) : null}
 
         <p className="signup-note">
-          New here?{" "}
+          アカウントをお持ちでない方は{" "}
           <Link href="/auth/register" className="text-link">
-            Create an account
+            新規登録
           </Link>
         </p>
       </section>
