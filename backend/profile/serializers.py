@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import TechSkill, UserSkill
@@ -32,6 +33,7 @@ class MyProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "email", "skills", "date_joined", "updated_at"]
 
+    @extend_schema_field(TechSkillSerializer(many=True))
     def get_skills(self, obj):
         qs = UserSkill.objects.filter(user=obj).select_related("skill")
         return TechSkillSerializer([us.skill for us in qs], many=True).data
@@ -55,6 +57,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    @extend_schema_field(TechSkillSerializer(many=True))
     def get_skills(self, obj):
         qs = UserSkill.objects.filter(user=obj).select_related("skill")
         return TechSkillSerializer([us.skill for us in qs], many=True).data

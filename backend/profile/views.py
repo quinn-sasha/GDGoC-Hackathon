@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions
 
 from .serializers import MyProfileSerializer, UserProfileSerializer
@@ -6,6 +7,7 @@ from .serializers import MyProfileSerializer, UserProfileSerializer
 User = get_user_model()
 
 
+@extend_schema(tags=["プロフィール"])
 class MyProfileView(generics.RetrieveUpdateAPIView):
     """GET/PATCH /api/profile/me/ — 自分のプロフィール取得・更新"""
 
@@ -17,6 +19,7 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+@extend_schema(tags=["プロフィール"])
 class UserProfileView(generics.RetrieveAPIView):
     """GET /api/profile/{id}/ — 他ユーザーのプロフィール取得"""
 
