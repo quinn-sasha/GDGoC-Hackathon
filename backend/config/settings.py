@@ -33,6 +33,10 @@ INSTALLED_APPS = [
     "drf_spectacular",
     # ローカル
     "accounts",
+    "home",
+    "project",
+    "profile",
+    "message",
 ]
 
 MIDDLEWARE = [

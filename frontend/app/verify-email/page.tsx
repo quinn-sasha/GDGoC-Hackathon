@@ -36,9 +36,9 @@ export default function VerifyEmailPage() {
       return;
     }
 
-    setSuccessMessage("Email verified. Redirecting to dashboard...");
+    setSuccessMessage("Email verified. Redirecting to home...");
     setTimeout(() => {
-      router.push("/dashboard");
+      router.push("/home");
     }, 700);
     setIsSubmitting(false);
   };
@@ -84,7 +84,7 @@ export default function VerifyEmailPage() {
 
         <p className="signup-note">
           Need to register first?{" "}
-          <Link href="/register" className="text-link">
+          <Link href="/auth/register" className="text-link">
             Go to register
           </Link>
         </p>
