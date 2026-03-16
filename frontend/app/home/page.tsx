@@ -7,6 +7,7 @@ import {
   HOME_CATEGORIES,
   HOME_FEATURED,
   HOME_UPDATES,
+  PROFILE_PROJECTS,
   PROFILE_SUMMARY,
   type HomeFeatured,
   type HomeUpdate,
@@ -855,6 +856,7 @@ export default function HomePage() {
               ))}
             </div>
           </section>
+
         ) : null}
 
         {/* Latest Updates */}
@@ -914,6 +916,30 @@ export default function HomePage() {
               </article>
             ))
             )}
+          </div>
+        </section>
+
+        <section style={S.section}>
+          <div style={S.sectionRow}>
+            <h3 style={S.sectionTitle}>参加中のプロジェクト</h3>
+          </div>
+          <div style={S.updates}>
+            {PROFILE_PROJECTS.slice(0, 3).map((project) => (
+              <article key={project.name} style={{ ...S.card, borderLeft: `6px solid ${project.accent}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+                  <div style={{ ...S.avatarSm, background: project.accent }}>{project.initial}</div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ ...S.cardTitle, margin: 0 }}>{project.name}</h4>
+                    <span style={{ fontSize: "0.78rem", color: "#aaaaaa" }}>{project.meta}</span>
+                  </div>
+                  <span style={{ ...S.statusBadge("#ffffff", project.accent), fontSize: "0.7rem" }}>{project.badge}</span>
+                </div>
+                <p style={S.cardDesc}>{project.description}</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", color: "#888888" }}>
+                  <span>{project.members}</span>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
       </div>

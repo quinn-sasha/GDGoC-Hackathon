@@ -4,8 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getAllChatThreads, getStoredChatMessages, saveChatMessages, type StoredChatMessage } from "@/lib/chat-storage";
 
-const QUICK_REPLIES = ["ありがとうございます！", "今夜なら対応できます", "詳細を教えてください", "一度通話しませんか？"];
-
 function getDefaultMessages(preview?: string, time?: string): StoredChatMessage[] {
   return [
     {
