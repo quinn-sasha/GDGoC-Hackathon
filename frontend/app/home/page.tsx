@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   HOME_CATEGORIES,
   HOME_FEATURED,
@@ -31,12 +31,24 @@ const STATUS_LABELS: Record<string, string> = {
   DRAFT: "下書き",
 };
 
+const STATUS_STYLES: Record<string, { color: string; bg: string }> = {
+  ONGOING: { color: "#4fc3a1", bg: "#0d2e22" },
+  FEATURED: { color: "#6b9eff", bg: "#0d1f4a" },
+  "IN REVIEW": { color: "#f5c86b", bg: "#3a2d10" },
+  COMPLETED: { color: "#9ca3af", bg: "#1f2937" },
+  DRAFT: { color: "#a3a3a3", bg: "#2a2a2a" },
+};
+
 function translateCategory(category: string) {
   return CATEGORY_LABELS[category] ?? category;
 }
 
 function translateStatus(status: string) {
   return STATUS_LABELS[status] ?? status;
+}
+
+function getStatusStyle(status: string) {
+  return STATUS_STYLES[status] ?? STATUS_STYLES.ONGOING;
 }
 
 function translateRelativeTime(value: string) {
@@ -63,6 +75,8 @@ function isAllCategory(category: string) {
 function getAllCategory(categories: string[]) {
   return categories.find((category) => isAllCategory(category)) ?? categories[0] ?? "すべて";
 }
+
+const DEFAULT_CREATE_CATEGORY = HOME_CATEGORIES.find((category) => !isAllCategory(category)) ?? "技術";
 
 const S = {
   root: {
@@ -385,6 +399,123 @@ const S = {
     fontSize: "0.72rem",
     padding: "0 20px",
   },
+  createFab: {
+    position: "fixed" as const,
+    right: "max(20px, calc(50vw - 220px))",
+    bottom: 84,
+    width: 72,
+    height: 72,
+    border: "none",
+    borderRadius: "50%",
+    background: "#8aff1d",
+    color: "#111111",
+    fontWeight: 800,
+    fontSize: "2.2rem",
+    lineHeight: 1,
+    padding: 0,
+    boxShadow: "0 12px 24px rgba(0, 0, 0, 0.35)",
+    cursor: "pointer",
+    zIndex: 120,
+  },
+  modalBackdrop: {
+    position: "fixed" as const,
+    inset: 0,
+    background: "rgba(0, 0, 0, 0.65)",
+    zIndex: 160,
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  modalPanel: {
+    width: "100%",
+    maxWidth: 480,
+    background: "#1a1a1a",
+    borderRadius: "24px 24px 0 0",
+    borderTop: "1px solid #2a2a2a",
+    padding: "22px 18px 28px",
+  },
+  modalHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  modalTitle: {
+    margin: 0,
+    fontSize: "1rem",
+    fontWeight: 700,
+  },
+  modalClose: {
+    background: "none",
+    border: "none",
+    color: "#888888",
+    fontSize: "1.4rem",
+    lineHeight: 1,
+    cursor: "pointer",
+    padding: 0,
+  },
+  fieldLabel: {
+    display: "block",
+    fontSize: "0.78rem",
+    color: "#8b8b8b",
+    margin: "10px 0 6px",
+    letterSpacing: "0.04em",
+  },
+  fieldInput: {
+    width: "100%",
+    background: "#111111",
+    border: "1px solid #2d2d2d",
+    borderRadius: 12,
+    color: "#ffffff",
+    fontSize: "0.9rem",
+    padding: "11px 12px",
+    boxSizing: "border-box" as const,
+    outline: "none",
+  },
+  fieldTextarea: {
+    width: "100%",
+    minHeight: 86,
+    resize: "vertical" as const,
+    background: "#111111",
+    border: "1px solid #2d2d2d",
+    borderRadius: 12,
+    color: "#ffffff",
+    fontSize: "0.9rem",
+    padding: "11px 12px",
+    boxSizing: "border-box" as const,
+    outline: "none",
+    lineHeight: 1.45,
+  },
+  modalRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+  },
+  modalActions: {
+    display: "flex",
+    gap: 10,
+    marginTop: 16,
+  },
+  cancelBtn: {
+    flex: 1,
+    borderRadius: 12,
+    border: "1px solid #343434",
+    background: "#1f1f1f",
+    color: "#d0d0d0",
+    fontWeight: 700,
+    padding: "11px 0",
+    cursor: "pointer",
+  },
+  createBtn: {
+    flex: 1,
+    borderRadius: 12,
+    border: "none",
+    background: "#8aff1d",
+    color: "#111111",
+    fontWeight: 800,
+    padding: "11px 0",
+    cursor: "pointer",
+  },
 };
 
 export default function HomePage() {
@@ -395,9 +526,21 @@ export default function HomePage() {
   const [updates, setUpdates] = useState<HomeUpdate[]>(HOME_UPDATES);
   const [fetchError, setFetchError] = useState("");
   const [showAllUpdates, setShowAllUpdates] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftDescription, setDraftDescription] = useState("");
+  const [draftCategory, setDraftCategory] = useState(DEFAULT_CREATE_CATEGORY);
+  const [draftStatus, setDraftStatus] = useState("ONGOING");
   const router = useRouter();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const updatesSectionRef = useRef<HTMLElement | null>(null);
+
+  const createCategoryOptions = useMemo(() => {
+    const options = categories.filter((category) => !isAllCategory(category));
+    return options.length ? options : [DEFAULT_CREATE_CATEGORY];
+  }, [categories]);
+
+  const canCreate = draftTitle.trim() !== "" && draftDescription.trim() !== "";
 
   useEffect(() => {
     let isMounted = true;
@@ -433,6 +576,12 @@ export default function HomePage() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!createCategoryOptions.includes(draftCategory)) {
+      setDraftCategory(createCategoryOptions[0] ?? DEFAULT_CREATE_CATEGORY);
+    }
+  }, [createCategoryOptions, draftCategory]);
 
   const filteredUpdates = updates.filter((u) => {
     const matchesCategory =
@@ -470,6 +619,49 @@ export default function HomePage() {
 
   const handleOpenProjectDetail = (projectId: number) => {
     router.push(`/project/${projectId}`);
+  };
+
+  const resetCreateForm = () => {
+    setDraftTitle("");
+    setDraftDescription("");
+    setDraftCategory(createCategoryOptions[0] ?? DEFAULT_CREATE_CATEGORY);
+    setDraftStatus("ONGOING");
+  };
+
+  const handleOpenCreateModal = () => {
+    resetCreateForm();
+    setShowCreateModal(true);
+  };
+
+  const handleCreateRecruitment = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    const nextId = updates.reduce((maxId, item) => Math.max(maxId, item.id), 0) + 1;
+    const nextCategory = draftCategory || createCategoryOptions[0] || DEFAULT_CREATE_CATEGORY;
+    const nextStatus = draftStatus in STATUS_LABELS ? draftStatus : "ONGOING";
+    const nextStyle = getStatusStyle(nextStatus);
+
+    const createdUpdate: HomeUpdate = {
+      id: nextId,
+      title: draftTitle.trim(),
+      status: nextStatus,
+      statusColor: nextStyle.color,
+      statusBg: nextStyle.bg,
+      time: "今",
+      description: draftDescription.trim(),
+      author: PROFILE_SUMMARY.name.toUpperCase(),
+      category: nextCategory,
+      categoryTag: nextCategory,
+      avatarInitial: PROFILE_SUMMARY.avatarInitial,
+    };
+
+    setUpdates((prev) => [createdUpdate, ...prev]);
+    setShowCreateModal(false);
+    setShowAllUpdates(true);
+    setSearchQuery("");
+    setActiveCategory(getAllCategory(categories));
   };
 
   return (
@@ -626,6 +818,77 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+
+      <button type="button" style={S.createFab} onClick={() => router.push("/project/recruit")} aria-label="プロジェクト募集を作成">
+        ＋
+      </button>
+
+      {showCreateModal ? (
+        <div style={S.modalBackdrop} onClick={() => setShowCreateModal(false)}>
+          <section style={S.modalPanel} onClick={(event) => event.stopPropagation()}>
+            <div style={S.modalHeader}>
+              <h4 style={S.modalTitle}>プロジェクト募集を作成</h4>
+              <button type="button" style={S.modalClose} onClick={() => setShowCreateModal(false)} aria-label="閉じる">
+                ×
+              </button>
+            </div>
+
+            <label style={S.fieldLabel}>タイトル</label>
+            <input
+              style={S.fieldInput}
+              type="text"
+              placeholder="例: 学園祭ライブ配信アプリ開発"
+              value={draftTitle}
+              onChange={(event) => setDraftTitle(event.target.value)}
+            />
+
+            <label style={S.fieldLabel}>募集内容</label>
+            <textarea
+              style={S.fieldTextarea}
+              placeholder="一緒に作りたい内容、募集したい役割、期間など"
+              value={draftDescription}
+              onChange={(event) => setDraftDescription(event.target.value)}
+            />
+
+            <div style={S.modalRow}>
+              <div>
+                <label style={S.fieldLabel}>カテゴリ</label>
+                <select style={S.fieldInput} value={draftCategory} onChange={(event) => setDraftCategory(event.target.value)}>
+                  {createCategoryOptions.map((category) => (
+                    <option key={category} value={category}>
+                      {translateCategory(category)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={S.fieldLabel}>ステータス</label>
+                <select style={S.fieldInput} value={draftStatus} onChange={(event) => setDraftStatus(event.target.value)}>
+                  {Object.keys(STATUS_LABELS).map((statusKey) => (
+                    <option key={statusKey} value={statusKey}>
+                      {translateStatus(statusKey)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={S.modalActions}>
+              <button type="button" style={S.cancelBtn} onClick={() => setShowCreateModal(false)}>
+                キャンセル
+              </button>
+              <button
+                type="button"
+                style={{ ...S.createBtn, opacity: canCreate ? 1 : 0.55, cursor: canCreate ? "pointer" : "default" }}
+                onClick={handleCreateRecruitment}
+              >
+                作成
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {/* Bottom nav */}
       <nav style={S.nav}>
