@@ -23,37 +23,14 @@ export default function ChatPage() {
       <header
         style={{
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 10,
           padding: "16px 20px 8px",
         }}
       >
         <h1 style={{ margin: 0, fontSize: "1.75rem", letterSpacing: "0.01em", fontWeight: 800 }}>
-          Messages
+          メッセージ
         </h1>
-        <button
-          aria-label="Filter messages"
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#888888",
-            cursor: "pointer",
-            padding: 4,
-          }}
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M4 6h10" />
-            <path d="M18 6h2" />
-            <path d="M8 12h12" />
-            <path d="M4 12h2" />
-            <path d="M4 18h10" />
-            <path d="M18 18h2" />
-            <circle cx="15" cy="6" r="1" fill="currentColor" />
-            <circle cx="9" cy="12" r="1" fill="currentColor" />
-            <circle cx="15" cy="18" r="1" fill="currentColor" />
-          </svg>
-        </button>
       </header>
 
       <section style={{ marginBottom: 12 }}>
@@ -74,7 +51,7 @@ export default function ChatPage() {
             <circle cx="11" cy="11" r="7" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-          <span style={{ fontSize: "0.9rem" }}>Search projects or devs...</span>
+          <span style={{ fontSize: "0.9rem" }}>ユーザーを検索...</span>
         </div>
       </section>
 
@@ -87,35 +64,56 @@ export default function ChatPage() {
         {THREADS.map((thread) => (
           <article
             key={thread.id}
+            onClick={() => router.push(`/chat/${thread.id}`)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                router.push(`/chat/${thread.id}`);
+              }
+            }}
             style={{
               display: "flex",
               gap: 14,
               padding: "14px 20px",
+              cursor: "pointer",
             }}
           >
             <div
               style={{
                 width: 64,
                 height: 64,
-                borderRadius: 16,
+                borderRadius: "50%",
                 background: "#1a1a1a",
-                border: `2px solid ${thread.accent}`,
+                border: "3px solid #1f4f26",
                 position: "relative",
                 boxShadow: thread.online ? "0 0 20px rgba(79, 195, 161, 0.18)" : "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.35rem",
-                fontWeight: 800,
+                display: "grid",
+                placeItems: "center",
                 flexShrink: 0,
               }}
             >
-              {thread.avatar}
+              <div
+                style={{
+                  width: 54,
+                  height: 54,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: "1.2rem",
+                  fontWeight: 800,
+                  color: "#2b1f1c",
+                }}
+              >
+                {thread.avatar}
+              </div>
               <span
                 style={{
                   position: "absolute",
-                  right: -4,
-                  bottom: -4,
+                  right: -3,
+                  bottom: -3,
                   width: 18,
                   height: 18,
                   borderRadius: "50%",
@@ -175,7 +173,7 @@ export default function ChatPage() {
       </section>
 
       <button
-        aria-label="Create new conversation"
+        aria-label="新しい会話を作成"
         style={{
           position: "fixed",
           right: "max(22px, calc(50vw - 218px))",
@@ -231,7 +229,7 @@ export default function ChatPage() {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
           </svg>
-          <span>Home</span>
+          <span>ホーム</span>
         </button>
         <button
           style={{
@@ -250,7 +248,7 @@ export default function ChatPage() {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
-          <span>Chat</span>
+          <span>チャット</span>
         </button>
         <button
           style={{
@@ -271,7 +269,7 @@ export default function ChatPage() {
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
-          <span>Profile</span>
+          <span>プロフィール</span>
         </button>
       </nav>
     </main>
