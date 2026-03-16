@@ -10,10 +10,16 @@ export default function ProfileEditPage() {
   const [name, setName] = useState(PROFILE_SUMMARY.name);
   const [handle, setHandle] = useState(PROFILE_SUMMARY.handle);
   const [bio, setBio] = useState(PROFILE_SUMMARY.bio);
+  const [githubUrl, setGithubUrl] = useState("");
+  const [portfolioUrl, setPortfolioUrl] = useState("");
   const [skills, setSkills] = useState<string[]>(PROFILE_SKILLS.filter((s) => s !== "+"));
   const [showPicker, setShowPicker] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  const isValidLink = (value: string) => value.trim() === "" || /^https?:\/\/\S+$/i.test(value.trim());
+  const hasInvalidLink = !isValidLink(githubUrl) || !isValidLink(portfolioUrl);
+  const canSave = name.trim() !== "" && handle.trim() !== "" && !hasInvalidLink;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -208,7 +214,7 @@ export default function ProfileEditPage() {
       {/* Form */}
       <section style={{ padding: "32px 20px 0", display: "flex", flexDirection: "column", gap: 24 }}>
         <div>
-          <label style={labelStyle}>名前</label>
+          <label style={labelStyle}>ユーザー名</label>
           <input
             type="text"
             value={name}
@@ -239,6 +245,31 @@ export default function ProfileEditPage() {
               lineHeight: 1.6,
             }}
           />
+        </div>
+
+        <div>
+          <label style={labelStyle}>開発リンク</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <input
+              type="url"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              placeholder="GitHub URL"
+              style={inputStyle}
+            />
+            <input
+              type="url"
+              value={portfolioUrl}
+              onChange={(e) => setPortfolioUrl(e.target.value)}
+              placeholder="ポートフォリオ URL"
+              style={inputStyle}
+            />
+          </div>
+          {hasInvalidLink ? (
+            <p style={{ margin: "8px 0 0", color: "#ff7d7d", fontSize: "0.78rem" }}>
+              リンクは http:// または https:// から始めて入力してください。
+            </p>
+          ) : null}
         </div>
 
         <div>
@@ -377,7 +408,10 @@ export default function ProfileEditPage() {
       {/* Save button */}
       <div style={{ padding: "36px 20px 0" }}>
         <button
-          onClick={() => router.back()}
+          onClick={() => {
+            if (!canSave) return;
+            router.back();
+          }}
           style={{
             width: "100%",
             background: "#8aff1d",
@@ -387,7 +421,8 @@ export default function ProfileEditPage() {
             fontSize: "1rem",
             fontWeight: 800,
             padding: "16px 0",
-            cursor: "pointer",
+            cursor: canSave ? "pointer" : "default",
+            opacity: canSave ? 1 : 0.55,
           }}
         >
           保存する

@@ -31,24 +31,12 @@ const STATUS_LABELS: Record<string, string> = {
   DRAFT: "下書き",
 };
 
-const STATUS_STYLES: Record<string, { color: string; bg: string }> = {
-  ONGOING: { color: "#4fc3a1", bg: "#0d2e22" },
-  FEATURED: { color: "#6b9eff", bg: "#0d1f4a" },
-  "IN REVIEW": { color: "#f5c86b", bg: "#3a2d10" },
-  COMPLETED: { color: "#9ca3af", bg: "#1f2937" },
-  DRAFT: { color: "#a3a3a3", bg: "#2a2a2a" },
-};
-
 function translateCategory(category: string) {
   return CATEGORY_LABELS[category] ?? category;
 }
 
 function translateStatus(status: string) {
   return STATUS_LABELS[status] ?? status;
-}
-
-function getStatusStyle(status: string) {
-  return STATUS_STYLES[status] ?? STATUS_STYLES.ONGOING;
 }
 
 function translateRelativeTime(value: string) {
@@ -76,7 +64,13 @@ function getAllCategory(categories: string[]) {
   return categories.find((category) => isAllCategory(category)) ?? categories[0] ?? "すべて";
 }
 
-const DEFAULT_CREATE_CATEGORY = HOME_CATEGORIES.find((category) => !isAllCategory(category)) ?? "技術";
+function toDisplayName(author: string) {
+  return author
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0] + word.slice(1).toLowerCase())
+    .join(" ");
+}
 
 const S = {
   root: {
@@ -154,12 +148,58 @@ const S = {
     boxSizing: "border-box" as const,
     outline: "none",
   },
+  searchClearBtn: {
+    position: "absolute" as const,
+    right: 10,
+    top: "50%",
+    transform: "translateY(-50%)",
+    border: "none",
+    background: "#2a2a2a",
+    color: "#cfcfcf",
+    borderRadius: 999,
+    width: 26,
+    height: 26,
+    fontSize: "0.9rem",
+    lineHeight: 1,
+    cursor: "pointer",
+    display: "grid",
+    placeItems: "center",
+  },
   catsRow: {
     display: "flex",
     gap: 8,
     padding: "8px 20px 12px",
     overflowX: "auto" as const,
     scrollbarWidth: "none" as const,
+  },
+  feedTools: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    padding: "0 20px 6px",
+  },
+  resultMeta: {
+    fontSize: "0.78rem",
+    color: "#888888",
+    whiteSpace: "nowrap" as const,
+  },
+  sortSelect: {
+    background: "#1e1e1e",
+    border: "1px solid #343434",
+    borderRadius: 10,
+    color: "#e2e2e2",
+    fontSize: "0.8rem",
+    padding: "7px 10px",
+    outline: "none",
+  },
+  subtleBtn: {
+    background: "none",
+    border: "none",
+    color: "#9f9f9f",
+    fontSize: "0.8rem",
+    cursor: "pointer",
+    padding: "0 2px",
   },
   catBase: {
     flexShrink: 0,
@@ -199,6 +239,80 @@ const S = {
     color: "#888888",
     fontWeight: 700,
   },
+  sectionLabelRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  recommendedRail: {
+    display: "flex",
+    gap: 12,
+    overflowX: "auto" as const,
+    scrollSnapType: "x mandatory" as const,
+    scrollbarWidth: "none" as const,
+    paddingBottom: 4,
+  },
+  recommendedDots: {
+    display: "flex",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 12,
+  },
+  recommendedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    border: "none",
+    padding: 0,
+    background: "#444444",
+    cursor: "pointer",
+    transition: "transform 0.2s ease, background 0.2s ease",
+  },
+  recommendedDotActive: {
+    background: "#ffffff",
+    transform: "scale(1.15)",
+  },
+  recommendedCard: {
+    width: "100%",
+    minWidth: "100%",
+    maxWidth: "100%",
+    flexShrink: 0,
+    scrollSnapAlign: "start" as const,
+    cursor: "pointer",
+    boxSizing: "border-box" as const,
+    borderRadius: 18,
+    overflow: "hidden",
+    background: "#171717",
+    border: "1px solid #2a2a2a",
+  },
+  recommendedImageFrame: {
+    position: "relative" as const,
+    width: "100%",
+    aspectRatio: "16 / 9",
+    background: "#152126",
+  },
+  recommendedContent: {
+    padding: "14px 16px 16px",
+  },
+  recommendedMetaRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 10,
+  },
+  recommendedStatus: {
+    background: "#1a3028",
+    color: "#4fc3a1",
+    border: "1px solid #2d5a47",
+    borderRadius: 6,
+    padding: "3px 10px",
+    fontSize: "0.7rem",
+    letterSpacing: "0.08em",
+    fontWeight: 700,
+    whiteSpace: "nowrap" as const,
+  },
   featured: {
     position: "relative" as const,
     borderRadius: 18,
@@ -211,11 +325,13 @@ const S = {
   },
   featuredImage: {
     objectFit: "cover" as const,
+    zIndex: 0,
   },
   featuredOverlay: {
     position: "absolute" as const,
     inset: 0,
     background: "linear-gradient(180deg, rgba(8, 12, 14, 0.12) 0%, rgba(8, 12, 14, 0.72) 100%)",
+    zIndex: 1,
   },
   badgeOngoing: {
     position: "absolute" as const,
@@ -229,8 +345,11 @@ const S = {
     fontSize: "0.7rem",
     letterSpacing: "0.08em",
     fontWeight: 700,
+    zIndex: 2,
   },
   featuredBottom: {
+    position: "relative" as const,
+    zIndex: 2,
     padding: "0 18px 18px",
   },
   featuredTags: {
@@ -265,6 +384,10 @@ const S = {
     fontSize: "0.85rem",
     color: "#aaaaaa",
     lineHeight: 1.5,
+    overflow: "hidden",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical" as const,
   },
   featuredHost: {
     display: "flex",
@@ -417,105 +540,6 @@ const S = {
     cursor: "pointer",
     zIndex: 120,
   },
-  modalBackdrop: {
-    position: "fixed" as const,
-    inset: 0,
-    background: "rgba(0, 0, 0, 0.65)",
-    zIndex: 160,
-    display: "flex",
-    alignItems: "flex-end",
-    justifyContent: "center",
-  },
-  modalPanel: {
-    width: "100%",
-    maxWidth: 480,
-    background: "#1a1a1a",
-    borderRadius: "24px 24px 0 0",
-    borderTop: "1px solid #2a2a2a",
-    padding: "22px 18px 28px",
-  },
-  modalHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 14,
-  },
-  modalTitle: {
-    margin: 0,
-    fontSize: "1rem",
-    fontWeight: 700,
-  },
-  modalClose: {
-    background: "none",
-    border: "none",
-    color: "#888888",
-    fontSize: "1.4rem",
-    lineHeight: 1,
-    cursor: "pointer",
-    padding: 0,
-  },
-  fieldLabel: {
-    display: "block",
-    fontSize: "0.78rem",
-    color: "#8b8b8b",
-    margin: "10px 0 6px",
-    letterSpacing: "0.04em",
-  },
-  fieldInput: {
-    width: "100%",
-    background: "#111111",
-    border: "1px solid #2d2d2d",
-    borderRadius: 12,
-    color: "#ffffff",
-    fontSize: "0.9rem",
-    padding: "11px 12px",
-    boxSizing: "border-box" as const,
-    outline: "none",
-  },
-  fieldTextarea: {
-    width: "100%",
-    minHeight: 86,
-    resize: "vertical" as const,
-    background: "#111111",
-    border: "1px solid #2d2d2d",
-    borderRadius: 12,
-    color: "#ffffff",
-    fontSize: "0.9rem",
-    padding: "11px 12px",
-    boxSizing: "border-box" as const,
-    outline: "none",
-    lineHeight: 1.45,
-  },
-  modalRow: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-  },
-  modalActions: {
-    display: "flex",
-    gap: 10,
-    marginTop: 16,
-  },
-  cancelBtn: {
-    flex: 1,
-    borderRadius: 12,
-    border: "1px solid #343434",
-    background: "#1f1f1f",
-    color: "#d0d0d0",
-    fontWeight: 700,
-    padding: "11px 0",
-    cursor: "pointer",
-  },
-  createBtn: {
-    flex: 1,
-    borderRadius: 12,
-    border: "none",
-    background: "#8aff1d",
-    color: "#111111",
-    fontWeight: 800,
-    padding: "11px 0",
-    cursor: "pointer",
-  },
 };
 
 export default function HomePage() {
@@ -526,21 +550,52 @@ export default function HomePage() {
   const [updates, setUpdates] = useState<HomeUpdate[]>(HOME_UPDATES);
   const [fetchError, setFetchError] = useState("");
   const [showAllUpdates, setShowAllUpdates] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [draftTitle, setDraftTitle] = useState("");
-  const [draftDescription, setDraftDescription] = useState("");
-  const [draftCategory, setDraftCategory] = useState(DEFAULT_CREATE_CATEGORY);
-  const [draftStatus, setDraftStatus] = useState("ONGOING");
+  const [sortMode, setSortMode] = useState<"new" | "old" | "title">("new");
+  const [activeRecommendationIndex, setActiveRecommendationIndex] = useState(0);
   const router = useRouter();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const updatesSectionRef = useRef<HTMLElement | null>(null);
+  const recommendedRailRef = useRef<HTMLDivElement | null>(null);
+  const recommendedCardRefs = useRef<Array<HTMLElement | null>>([]);
 
-  const createCategoryOptions = useMemo(() => {
-    const options = categories.filter((category) => !isAllCategory(category));
-    return options.length ? options : [DEFAULT_CREATE_CATEGORY];
-  }, [categories]);
+  const recommendedProjects = useMemo(() => {
+    const featuredProject = {
+      id: featured.id,
+      title: featured.title,
+      description: featured.description,
+      category: featured.category,
+      badge: featured.badge,
+      label: featured.label,
+      readTime: featured.readTime,
+      hostInitial: featured.hostInitial,
+      hostName: featured.hostName,
+    };
 
-  const canCreate = draftTitle.trim() !== "" && draftDescription.trim() !== "";
+    const updateProjects = updates
+      .filter((item) => item.id !== featured.id)
+      .slice(0, 2)
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        badge: item.status,
+        label: item.category,
+        readTime: item.time,
+        hostInitial: item.avatarInitial,
+        hostName: toDisplayName(item.author),
+      }));
+
+    return [featuredProject, ...updateProjects];
+  }, [featured, updates]);
+
+  const handleSelectRecommendation = (index: number) => {
+    setActiveRecommendationIndex(index);
+    const nextCard = recommendedCardRefs.current[index];
+    if (nextCard) {
+      nextCard.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -577,27 +632,30 @@ export default function HomePage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!createCategoryOptions.includes(draftCategory)) {
-      setDraftCategory(createCategoryOptions[0] ?? DEFAULT_CREATE_CATEGORY);
-    }
-  }, [createCategoryOptions, draftCategory]);
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const isSearchMode = normalizedSearchQuery !== "";
 
   const filteredUpdates = updates.filter((u) => {
     const matchesCategory =
       isAllCategory(activeCategory) || u.categoryTag === activeCategory;
-    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      q === "" ||
-      u.title.toLowerCase().includes(q) ||
-      u.description.toLowerCase().includes(q) ||
-      u.author.toLowerCase().includes(q);
+      normalizedSearchQuery === "" ||
+      u.title.toLowerCase().includes(normalizedSearchQuery) ||
+      u.description.toLowerCase().includes(normalizedSearchQuery) ||
+      u.author.toLowerCase().includes(normalizedSearchQuery);
     return matchesCategory && matchesSearch;
   });
 
-  const visibleUpdates = showAllUpdates
-    ? filteredUpdates
-    : filteredUpdates.slice(0, 2);
+  const sortedUpdates = [...filteredUpdates];
+  if (sortMode === "old") {
+    sortedUpdates.reverse();
+  } else if (sortMode === "title") {
+    sortedUpdates.sort((a, b) => a.title.localeCompare(b.title, "ja"));
+  }
+
+  const visibleUpdates = showAllUpdates || isSearchMode
+    ? sortedUpdates
+    : sortedUpdates.slice(0, 2);
 
   const handleViewAll = () => {
     setShowAllUpdates(true);
@@ -617,51 +675,43 @@ export default function HomePage() {
     setShowAllUpdates(false);
   };
 
+  const handleResetFeedFilters = () => {
+    setSearchQuery("");
+    setActiveCategory(getAllCategory(categories));
+    setSortMode("new");
+    setShowAllUpdates(false);
+  };
+
   const handleOpenProjectDetail = (projectId: number) => {
     router.push(`/project/${projectId}`);
   };
 
-  const resetCreateForm = () => {
-    setDraftTitle("");
-    setDraftDescription("");
-    setDraftCategory(createCategoryOptions[0] ?? DEFAULT_CREATE_CATEGORY);
-    setDraftStatus("ONGOING");
-  };
-
-  const handleOpenCreateModal = () => {
-    resetCreateForm();
-    setShowCreateModal(true);
-  };
-
-  const handleCreateRecruitment = () => {
-    if (!canCreate) {
+  const handleRecommendationRailScroll = () => {
+    const rail = recommendedRailRef.current;
+    if (!rail) {
       return;
     }
 
-    const nextId = updates.reduce((maxId, item) => Math.max(maxId, item.id), 0) + 1;
-    const nextCategory = draftCategory || createCategoryOptions[0] || DEFAULT_CREATE_CATEGORY;
-    const nextStatus = draftStatus in STATUS_LABELS ? draftStatus : "ONGOING";
-    const nextStyle = getStatusStyle(nextStatus);
+    const railCenter = rail.scrollLeft + rail.clientWidth / 2;
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
 
-    const createdUpdate: HomeUpdate = {
-      id: nextId,
-      title: draftTitle.trim(),
-      status: nextStatus,
-      statusColor: nextStyle.color,
-      statusBg: nextStyle.bg,
-      time: "今",
-      description: draftDescription.trim(),
-      author: PROFILE_SUMMARY.name.toUpperCase(),
-      category: nextCategory,
-      categoryTag: nextCategory,
-      avatarInitial: PROFILE_SUMMARY.avatarInitial,
-    };
+    recommendedCardRefs.current.forEach((card, index) => {
+      if (!card) {
+        return;
+      }
 
-    setUpdates((prev) => [createdUpdate, ...prev]);
-    setShowCreateModal(false);
-    setShowAllUpdates(true);
-    setSearchQuery("");
-    setActiveCategory(getAllCategory(categories));
+      const cardCenter = card.offsetLeft + card.clientWidth / 2;
+      const distance = Math.abs(cardCenter - railCenter);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    if (closestIndex !== activeRecommendationIndex) {
+      setActiveRecommendationIndex(closestIndex);
+    }
   };
 
   return (
@@ -690,6 +740,11 @@ export default function HomePage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+        {searchQuery ? (
+          <button type="button" style={S.searchClearBtn} onClick={() => setSearchQuery("")} aria-label="検索をクリア">
+            ×
+          </button>
+        ) : null}
       </div>
 
       {fetchError ? (
@@ -711,44 +766,93 @@ export default function HomePage() {
         ))}
       </div>
 
+      <div style={S.feedTools}>
+        <span style={S.resultMeta}>{sortedUpdates.length}件ヒット</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <select
+            value={sortMode}
+            onChange={(event) => setSortMode(event.target.value as "new" | "old" | "title")}
+            style={S.sortSelect}
+            aria-label="並び替え"
+          >
+            <option value="new">新着順</option>
+            <option value="old">古い順</option>
+            <option value="title">タイトル順</option>
+          </select>
+          {(searchQuery || !isAllCategory(activeCategory) || sortMode !== "new" || showAllUpdates) ? (
+            <button type="button" style={S.subtleBtn} onClick={handleResetFeedFilters}>
+              リセット
+            </button>
+          ) : null}
+        </div>
+      </div>
+
       <div ref={scrollContainerRef} style={S.scroll}>
-        {!showAllUpdates ? (
+        {!showAllUpdates && !isSearchMode ? (
           <section style={S.section}>
-            <p style={S.sectionLabel}>あなたへのおすすめ</p>
-            <div
-              style={{ ...S.featured, cursor: "pointer" }}
-              onClick={() => handleOpenProjectDetail(featured.id)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  handleOpenProjectDetail(featured.id);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label={`${featured.title} の詳細へ移動`}
-            >
-              <Image
-                src={buildProjectImage(featured.title, featured.category)}
-                alt={`${featured.title} の背景画像`}
-                fill
-                sizes="(max-width: 480px) 100vw, 480px"
-                style={S.featuredImage}
-              />
-              <div style={S.featuredOverlay} />
-              <span style={S.badgeOngoing}>{translateStatus(featured.badge)}</span>
-              <div style={S.featuredBottom}>
-                <div style={S.featuredTags}>
-                  <span style={S.badgeBlue}>{translateStatus(featured.label)}</span>
-                  <span style={S.readTime}>{translateRelativeTime(featured.readTime)}</span>
-                </div>
-                <h2 style={S.featuredTitle}>{featured.title}</h2>
-                <p style={S.featuredDesc}>{featured.description}</p>
-                <div style={S.featuredHost}>
-                  <div style={S.avatarSm}>{featured.hostInitial}</div>
-                  <span>{featured.hostName}</span>
-                </div>
-              </div>
+            <div style={S.sectionLabelRow}>
+              <p style={{ ...S.sectionLabel, margin: 0 }}>あなたへのおすすめ</p>
+            </div>
+            <div ref={recommendedRailRef} style={S.recommendedRail} onScroll={handleRecommendationRailScroll}>
+              {recommendedProjects.map((project) => (
+                <article
+                  key={project.id}
+                  ref={(node) => {
+                    recommendedCardRefs.current[recommendedProjects.findIndex((item) => item.id === project.id)] = node;
+                  }}
+                  style={S.recommendedCard}
+                  onClick={() => handleOpenProjectDetail(project.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleOpenProjectDetail(project.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${project.title} の詳細へ移動`}
+                >
+                  <div style={S.recommendedImageFrame}>
+                    <Image
+                      src={buildProjectImage(project.title, project.category)}
+                      alt={`${project.title} の背景画像`}
+                      fill
+                      sizes="(max-width: 480px) 100vw, 420px"
+                      style={S.featuredImage}
+                    />
+                  </div>
+                  <div style={S.recommendedContent}>
+                    <div style={S.recommendedMetaRow}>
+                      <span style={S.recommendedStatus}>{translateStatus(project.badge)}</span>
+                      <span style={S.readTime}>{translateRelativeTime(project.readTime)}</span>
+                    </div>
+                    <div style={S.featuredTags}>
+                      <span style={S.badgeBlue}>{translateStatus(project.label)}</span>
+                    </div>
+                    <h2 style={S.featuredTitle}>{project.title}</h2>
+                    <p style={S.featuredDesc}>{project.description}</p>
+                    <div style={S.featuredHost}>
+                      <div style={S.avatarSm}>{project.hostInitial}</div>
+                      <span>{project.hostName}</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div style={S.recommendedDots} aria-label="おすすめのページ切り替え">
+              {recommendedProjects.map((project, index) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  aria-label={`${index + 1}件目のおすすめを表示`}
+                  aria-pressed={activeRecommendationIndex === index}
+                  style={{
+                    ...S.recommendedDot,
+                    ...(activeRecommendationIndex === index ? S.recommendedDotActive : {}),
+                  }}
+                  onClick={() => handleSelectRecommendation(index)}
+                />
+              ))}
             </div>
           </section>
         ) : null}
@@ -756,16 +860,16 @@ export default function HomePage() {
         {/* Latest Updates */}
         <section ref={updatesSectionRef} style={S.section}>
           <div style={S.sectionRow}>
-            <h3 style={S.sectionTitle}>{showAllUpdates ? "最近の更新プロジェクト" : "最新の更新"}</h3>
-            {showAllUpdates ? (
+            <h3 style={S.sectionTitle}>{isSearchMode ? "検索結果" : showAllUpdates ? "最近の更新プロジェクト" : "最新の更新"}</h3>
+            {showAllUpdates && !isSearchMode ? (
               <button type="button" style={{ ...S.viewAll, background: "none", border: "none", cursor: "pointer" }} onClick={handleCloseAllUpdates}>
                 閉じる
               </button>
-            ) : (
+            ) : !isSearchMode ? (
               <button type="button" style={{ ...S.viewAll, background: "none", border: "none", cursor: "pointer" }} onClick={handleViewAll}>
                 すべて見る
               </button>
-            )}
+            ) : null}
           </div>
           <div style={S.updates}>
             {visibleUpdates.length === 0 ? (
@@ -804,12 +908,7 @@ export default function HomePage() {
                   </span>
                   <div style={S.cardAuthorRight}>
                     <div style={S.avatarSm}>{u.avatarInitial}</div>
-                    <span>
-                      {u.author
-                        .split(" ")
-                        .map((w) => w[0] + w.slice(1).toLowerCase())
-                        .join(" ")}
-                    </span>
+                    <span>{toDisplayName(u.author)}</span>
                   </div>
                 </div>
               </article>
@@ -822,73 +921,6 @@ export default function HomePage() {
       <button type="button" style={S.createFab} onClick={() => router.push("/project/recruit")} aria-label="プロジェクト募集を作成">
         ＋
       </button>
-
-      {showCreateModal ? (
-        <div style={S.modalBackdrop} onClick={() => setShowCreateModal(false)}>
-          <section style={S.modalPanel} onClick={(event) => event.stopPropagation()}>
-            <div style={S.modalHeader}>
-              <h4 style={S.modalTitle}>プロジェクト募集を作成</h4>
-              <button type="button" style={S.modalClose} onClick={() => setShowCreateModal(false)} aria-label="閉じる">
-                ×
-              </button>
-            </div>
-
-            <label style={S.fieldLabel}>タイトル</label>
-            <input
-              style={S.fieldInput}
-              type="text"
-              placeholder="例: 学園祭ライブ配信アプリ開発"
-              value={draftTitle}
-              onChange={(event) => setDraftTitle(event.target.value)}
-            />
-
-            <label style={S.fieldLabel}>募集内容</label>
-            <textarea
-              style={S.fieldTextarea}
-              placeholder="一緒に作りたい内容、募集したい役割、期間など"
-              value={draftDescription}
-              onChange={(event) => setDraftDescription(event.target.value)}
-            />
-
-            <div style={S.modalRow}>
-              <div>
-                <label style={S.fieldLabel}>カテゴリ</label>
-                <select style={S.fieldInput} value={draftCategory} onChange={(event) => setDraftCategory(event.target.value)}>
-                  {createCategoryOptions.map((category) => (
-                    <option key={category} value={category}>
-                      {translateCategory(category)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={S.fieldLabel}>ステータス</label>
-                <select style={S.fieldInput} value={draftStatus} onChange={(event) => setDraftStatus(event.target.value)}>
-                  {Object.keys(STATUS_LABELS).map((statusKey) => (
-                    <option key={statusKey} value={statusKey}>
-                      {translateStatus(statusKey)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={S.modalActions}>
-              <button type="button" style={S.cancelBtn} onClick={() => setShowCreateModal(false)}>
-                キャンセル
-              </button>
-              <button
-                type="button"
-                style={{ ...S.createBtn, opacity: canCreate ? 1 : 0.55, cursor: canCreate ? "pointer" : "default" }}
-                onClick={handleCreateRecruitment}
-              >
-                作成
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
 
       {/* Bottom nav */}
       <nav style={S.nav}>

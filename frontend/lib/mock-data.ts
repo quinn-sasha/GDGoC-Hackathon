@@ -34,7 +34,7 @@ export const HOME_FEATURED: HomeFeatured = {
   readTime: "12分で読める",
   title: "サステナブル都市建築のこれから",
   description:
-    "垂直型の緑化建築やモジュール工法が、これからの都市生活をどう変えていくのかを探ります...",
+    "垂直緑化やモジュール工法が、これからの都市生活をどう変えていくのかを紹介します。",
   hostInitial: "H",
   hostName: "ホスト名",
   category: "デザイン",
