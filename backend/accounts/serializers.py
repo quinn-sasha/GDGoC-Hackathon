@@ -13,7 +13,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("email", "password", "username")
+        fields = ["id", "email", "password", "username"]
+        read_only_fields = ["id"]
 
     password = serializers.CharField(
         write_only=True,
