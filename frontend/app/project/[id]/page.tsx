@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 
-import { HOME_FEATURED, HOME_UPDATES } from "@/lib/mock-data";
+import { HOME_FEATURED, HOME_UPDATES, PROFILE_SKILLS, PROFILE_SUMMARY } from "@/lib/mock-data";
+import { createApplicationChatThread } from "@/lib/chat-storage";
 import { buildProjectImage } from "@/lib/project-image";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -25,6 +27,20 @@ function toDisplayName(author: string) {
     .filter(Boolean)
     .map((word) => word[0] + word.slice(1).toLowerCase())
     .join(" ");
+}
+
+const ROLE_OPTIONS: Record<string, string[]> = {
+  技術: ["フロントエンド", "バックエンド", "モバイル", "AI/データ"],
+  デザイン: ["UIデザイン", "UX設計", "ブランディング", "イラスト"],
+  アート: ["ビジュアル制作", "アートディレクション", "3D/映像", "企画"],
+  音楽: ["作曲", "サウンドデザイン", "レコーディング", "PR"],
+  映像: ["映像編集", "撮影", "モーショングラフィック", "ディレクション"],
+};
+
+const AVAILABILITY_OPTIONS = ["平日夜", "土日中心", "毎日少しずつ"];
+
+function getRoleOptions(category: string) {
+  return ROLE_OPTIONS[category] ?? ["企画", "開発", "デザイン", "リサーチ"];
 }
 
 export default function ProjectDetailPage() {
@@ -49,6 +65,18 @@ export default function ProjectDetailPage() {
     : null;
 
   const project = updateProject ?? featuredProject;
+
+  const roleOptions = useMemo(() => getRoleOptions(project?.category ?? ""), [project?.category]);
+  const [selectedRole, setSelectedRole] = useState(roleOptions[0] ?? "");
+  const [availability, setAvailability] = useState(AVAILABILITY_OPTIONS[0]);
+  const [message, setMessage] = useState(
+    `はじめまして。${PROFILE_SUMMARY.name}です。プロジェクト内容に興味があり、まずは話を聞いてみたいです。`,
+  );
+  const [portfolioUrl, setPortfolioUrl] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [createdChatId, setCreatedChatId] = useState<number | null>(null);
 
   if (!project) {
     return (
@@ -85,6 +113,57 @@ export default function ProjectDetailPage() {
       </main>
     );
   }
+
+  const messageLength = message.trim().length;
+  const canSubmit = selectedRole !== "" && availability !== "" && messageLength >= 20 && !isSubmitting;
+
+  const handleSubmitApplication = async () => {
+    setSubmitError("");
+
+    if (!canSubmit) {
+      setSubmitError("応募する役割と参加ペースを選び、20文字以上のメッセージを入力してください。");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const nextEntry = {
+        projectId: project.id,
+        projectTitle: project.title,
+        role: selectedRole,
+        availability,
+        message: message.trim(),
+        portfolioUrl: portfolioUrl.trim(),
+        applicantName: PROFILE_SUMMARY.name,
+        applicantHandle: PROFILE_SUMMARY.handle,
+        submittedAt: new Date().toISOString(),
+      };
+      const raw = window.localStorage.getItem("projectApplications");
+      const previous = raw ? (JSON.parse(raw) as unknown[]) : [];
+      const next = [nextEntry, ...previous.filter((item) => {
+        if (!item || typeof item !== "object") {
+          return true;
+        }
+        return (item as { projectId?: number }).projectId !== project.id;
+      })].slice(0, 30);
+      window.localStorage.setItem("projectApplications", JSON.stringify(next));
+      const createdChatThread = createApplicationChatThread({
+        projectId: project.id,
+        projectTitle: project.title,
+        hostName: toDisplayName(project.author),
+        hostInitial: project.avatarInitial,
+        role: selectedRole,
+        openingMessage: message.trim(),
+      });
+      setCreatedChatId(createdChatThread.id);
+      setIsSubmitted(true);
+    } catch {
+      setSubmitError("応募内容の保存に失敗しました。時間をおいて再度お試しください。");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <main
@@ -206,7 +285,281 @@ export default function ProjectDetailPage() {
           <span>・</span>
           <span>{project.time}</span>
         </div>
+
+        <section
+          style={{
+            marginTop: 28,
+            background: "#181818",
+            border: "1px solid #262626",
+            borderRadius: 22,
+            padding: "18px 16px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <p style={{ margin: 0, color: "#8d8d8d", fontSize: "0.75rem", letterSpacing: "0.08em" }}>APPLICATION</p>
+              <h2 style={{ margin: "6px 0 0", fontSize: "1.05rem" }}>このプロジェクトに応募する</h2>
+            </div>
+            <span
+              style={{
+                borderRadius: 999,
+                background: "#222222",
+                color: "#d0d0d0",
+                padding: "8px 12px",
+                fontSize: "0.76rem",
+                whiteSpace: "nowrap",
+              }}
+            >
+              募集中
+            </span>
+          </div>
+
+          <div
+            style={{
+              marginTop: 16,
+              display: "grid",
+              gridTemplateColumns: "44px minmax(0, 1fr)",
+              gap: 12,
+              alignItems: "center",
+              padding: "12px",
+              background: "#111111",
+              borderRadius: 16,
+              border: "1px solid #242424",
+            }}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #f9a8a8 0%, #d47fa6 100%)",
+                display: "grid",
+                placeItems: "center",
+                color: "#ffffff",
+                fontWeight: 800,
+              }}
+            >
+              {PROFILE_SUMMARY.avatarInitial}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: "0.94rem", fontWeight: 700 }}>{PROFILE_SUMMARY.name}</div>
+              <div style={{ color: "#8d8d8d", fontSize: "0.8rem", marginTop: 4 }}>{PROFILE_SUMMARY.handle}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                {PROFILE_SKILLS.filter((skill) => skill !== "+").slice(0, 4).map((skill) => (
+                  <span
+                    key={skill}
+                    style={{
+                      borderRadius: 999,
+                      padding: "5px 9px",
+                      background: "#1f1f1f",
+                      border: "1px solid #2d2d2d",
+                      color: "#d8d8d8",
+                      fontSize: "0.74rem",
+                    }}
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 18 }}>
+            <label style={{ display: "block", color: "#8d8d8d", fontSize: "0.8rem", marginBottom: 10 }}>応募したい役割</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {roleOptions.map((role) => {
+                const isActive = selectedRole === role;
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setSelectedRole(role)}
+                    style={{
+                      borderRadius: 999,
+                      border: isActive ? "1px solid #8aff1d" : "1px solid #343434",
+                      background: isActive ? "rgba(138, 255, 29, 0.12)" : "#1a1a1a",
+                      color: isActive ? "#dfffbd" : "#d0d0d0",
+                      padding: "9px 12px",
+                      fontSize: "0.82rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {role}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 18 }}>
+            <label style={{ display: "block", color: "#8d8d8d", fontSize: "0.8rem", marginBottom: 10 }}>参加できるペース</label>
+            <div style={{ display: "flex", gap: 8, overflowX: "auto" }}>
+              {AVAILABILITY_OPTIONS.map((option) => {
+                const isActive = availability === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setAvailability(option)}
+                    style={{
+                      borderRadius: 12,
+                      border: isActive ? "1px solid #ffffff" : "1px solid #343434",
+                      background: isActive ? "#ffffff" : "#1a1a1a",
+                      color: isActive ? "#111111" : "#d0d0d0",
+                      padding: "10px 12px",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      whiteSpace: "nowrap",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 18 }}>
+            <label style={{ display: "block", color: "#8d8d8d", fontSize: "0.8rem", marginBottom: 10 }}>メッセージ</label>
+            <textarea
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              placeholder="どの役割でどう関わりたいかを書いてください"
+              style={{
+                width: "100%",
+                minHeight: 138,
+                resize: "vertical",
+                boxSizing: "border-box",
+                borderRadius: 16,
+                border: "1px solid #303030",
+                background: "#101010",
+                color: "#ffffff",
+                padding: "14px 14px",
+                fontSize: "0.92rem",
+                lineHeight: 1.6,
+                outline: "none",
+              }}
+            />
+            <div style={{ marginTop: 8, textAlign: "right", color: messageLength >= 20 ? "#7f7f7f" : "#ff8f8f", fontSize: "0.76rem" }}>
+              {messageLength}/20文字以上
+            </div>
+          </div>
+
+          <div style={{ marginTop: 18 }}>
+            <label style={{ display: "block", color: "#8d8d8d", fontSize: "0.8rem", marginBottom: 10 }}>ポートフォリオURL 任意</label>
+            <input
+              type="url"
+              value={portfolioUrl}
+              onChange={(event) => setPortfolioUrl(event.target.value)}
+              placeholder="https://..."
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                borderRadius: 14,
+                border: "1px solid #303030",
+                background: "#101010",
+                color: "#ffffff",
+                padding: "12px 14px",
+                fontSize: "0.9rem",
+                outline: "none",
+              }}
+            />
+          </div>
+
+          {submitError ? (
+            <p style={{ margin: "14px 0 0", color: "#ff8f8f", fontSize: "0.82rem", lineHeight: 1.6 }}>{submitError}</p>
+          ) : null}
+
+          {isSubmitted ? (
+            <div
+              style={{
+                marginTop: 16,
+                borderRadius: 16,
+                background: "rgba(138, 255, 29, 0.08)",
+                border: "1px solid rgba(138, 255, 29, 0.25)",
+                padding: "14px 14px",
+              }}
+            >
+              <p style={{ margin: 0, color: "#dfffbd", fontWeight: 700 }}>応募内容を送信しました</p>
+              <p style={{ margin: "8px 0 0", color: "#c7c7c7", fontSize: "0.86rem", lineHeight: 1.6 }}>
+                応募内容に対応するチャットを自動生成しました。このままホストとのやり取りを始められます。
+              </p>
+            </div>
+          ) : null}
+        </section>
       </section>
+
+      <div
+        style={{
+          position: "fixed",
+          left: "50%",
+          bottom: 0,
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: 480,
+          boxSizing: "border-box",
+          padding: "14px 20px 18px",
+          background: "linear-gradient(180deg, rgba(17, 17, 17, 0) 0%, rgba(17, 17, 17, 0.92) 24%, #111111 100%)",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        {isSubmitted ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => router.push(createdChatId ? `/chat/${createdChatId}` : "/chat")}
+              style={{
+                borderRadius: 14,
+                border: "1px solid #353535",
+                background: "#1a1a1a",
+                color: "#ffffff",
+                padding: "14px 12px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              チャットを開く
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/home")}
+              style={{
+                borderRadius: 14,
+                border: "none",
+                background: "#8aff1d",
+                color: "#111111",
+                padding: "14px 12px",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              ホームへ戻る
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSubmitApplication}
+            disabled={!canSubmit}
+            style={{
+              width: "100%",
+              borderRadius: 16,
+              border: "none",
+              background: "#8aff1d",
+              color: "#111111",
+              padding: "16px 14px",
+              fontSize: "0.98rem",
+              fontWeight: 800,
+              cursor: canSubmit ? "pointer" : "default",
+              opacity: canSubmit ? 1 : 0.55,
+              boxShadow: "0 12px 24px rgba(0, 0, 0, 0.35)",
+            }}
+          >
+            {isSubmitting ? "応募を送信中..." : `この内容で応募する`}
+          </button>
+        )}
+      </div>
     </main>
   );
 }

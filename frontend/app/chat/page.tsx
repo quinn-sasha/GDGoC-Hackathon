@@ -1,10 +1,41 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CHAT_THREADS as THREADS } from "@/lib/mock-data";
+import { getAllChatThreads } from "@/lib/chat-storage";
+
+const FILTERS = ["すべて", "未読", "オンライン"] as const;
+
+type ChatFilter = (typeof FILTERS)[number];
 
 export default function ChatPage() {
   const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<ChatFilter>("すべて");
+  const allThreads = useMemo(() => getAllChatThreads(), []);
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredThreads = useMemo(() => {
+    return allThreads.filter((thread) => {
+      const matchesQuery =
+        normalizedQuery === "" ||
+        thread.title.toLowerCase().includes(normalizedQuery) ||
+        thread.project.toLowerCase().includes(normalizedQuery) ||
+        thread.role.toLowerCase().includes(normalizedQuery) ||
+        thread.preview.toLowerCase().includes(normalizedQuery);
+
+      const matchesFilter =
+        activeFilter === "すべて" ||
+        (activeFilter === "未読" && thread.unreadCount > 0) ||
+        (activeFilter === "オンライン" && thread.online);
+
+      return matchesQuery && matchesFilter;
+    }).sort((left, right) => {
+      if (left.pinned && !right.pinned) return -1;
+      if (!left.pinned && right.pinned) return 1;
+      return right.unreadCount - left.unreadCount;
+    });
+  }, [activeFilter, allThreads, normalizedQuery]);
 
   return (
     <main
@@ -51,8 +82,67 @@ export default function ChatPage() {
             <circle cx="11" cy="11" r="7" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-          <span style={{ fontSize: "0.9rem" }}>ユーザーを検索...</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="ユーザー・案件名で検索"
+            style={{
+              flex: 1,
+              background: "transparent",
+              border: "none",
+              color: "#ffffff",
+              outline: "none",
+              fontSize: "0.9rem",
+            }}
+          />
+          {query ? (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              style={{
+                border: "none",
+                background: "#2a2a2a",
+                color: "#d0d0d0",
+                width: 24,
+                height: 24,
+                borderRadius: "50%",
+                cursor: "pointer",
+              }}
+            >
+              ×
+            </button>
+          ) : null}
         </div>
+      </section>
+
+      <section style={{ display: "flex", gap: 8, padding: "0 20px 12px", overflowX: "auto" }}>
+        {FILTERS.map((filter) => {
+          const isActive = activeFilter === filter;
+          return (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setActiveFilter(filter)}
+              style={{
+                borderRadius: 999,
+                border: isActive ? "1px solid #ffffff" : "1px solid #343434",
+                background: isActive ? "#ffffff" : "#1a1a1a",
+                color: isActive ? "#111111" : "#d0d0d0",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                padding: "8px 12px",
+                whiteSpace: "nowrap",
+                cursor: "pointer",
+              }}
+            >
+              {filter}
+            </button>
+          );
+        })}
+      </section>
+
+      <section style={{ padding: "0 20px 10px", color: "#7f7f7f", fontSize: "0.78rem" }}>
+        {filteredThreads.length}件の会話
       </section>
 
       <section
@@ -61,7 +151,11 @@ export default function ChatPage() {
           marginTop: 14,
         }}
       >
-        {THREADS.map((thread) => (
+        {filteredThreads.length === 0 ? (
+          <div style={{ padding: "28px 20px", color: "#8a8a8a", fontSize: "0.9rem", lineHeight: 1.7 }}>
+            条件に一致するチャットはありません。検索語やフィルタを変えてください。
+          </div>
+        ) : filteredThreads.map((thread) => (
           <article
             key={thread.id}
             onClick={() => router.push(`/chat/${thread.id}`)}
@@ -139,25 +233,64 @@ export default function ChatPage() {
                     lineHeight: 1.3,
                     fontWeight: 700,
                     whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
                   {thread.title}
                 </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  {thread.unreadCount > 0 ? (
+                    <span
+                      style={{
+                        minWidth: 20,
+                        height: 20,
+                        borderRadius: 999,
+                        padding: "0 6px",
+                        background: "#8aff1d",
+                        color: "#111111",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {thread.unreadCount}
+                    </span>
+                  ) : null}
+                  <span
+                    style={{
+                      color: thread.online ? "#4fc3a1" : "#888888",
+                      fontSize: "0.75rem",
+                      fontWeight: thread.online ? 700 : 500,
+                    }}
+                  >
+                    {thread.time}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7, minWidth: 0 }}>
+                {thread.pinned ? (
+                  <span style={{ color: "#8aff1d", fontSize: "0.72rem", fontWeight: 700 }}>固定</span>
+                ) : null}
                 <span
                   style={{
-                    color: thread.online ? "#4fc3a1" : "#888888",
-                    fontSize: "0.75rem",
-                    fontWeight: thread.online ? 700 : 500,
-                    flexShrink: 0,
+                    color: "#cfcfcf",
+                    fontSize: "0.76rem",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
-                  {thread.time}
+                  {thread.project}
                 </span>
+                <span style={{ color: "#555555" }}>•</span>
+                <span style={{ color: "#7f7f7f", fontSize: "0.76rem", whiteSpace: "nowrap" }}>{thread.role}</span>
               </div>
               <p
                 style={{
                   margin: "6px 0 0",
-                  color: "#999999",
+                  color: thread.unreadCount > 0 ? "#dfdfdf" : "#999999",
                   fontSize: "0.83rem",
                   lineHeight: 1.5,
                   whiteSpace: "nowrap",
@@ -172,27 +305,7 @@ export default function ChatPage() {
         ))}
       </section>
 
-      <button
-        aria-label="新しい会話を作成"
-        style={{
-          position: "fixed",
-          right: "max(22px, calc(50vw - 218px))",
-          bottom: 84,
-          width: 72,
-          height: 72,
-          borderRadius: "50%",
-          border: "none",
-          color: "#111111",
-          background: "#ffffff",
-          boxShadow: "0 12px 26px rgba(0, 0, 0, 0.35)",
-          fontSize: "2.4rem",
-          lineHeight: 1,
-          cursor: "pointer",
-          zIndex: 120,
-        }}
-      >
-        +
-      </button>
+      {/* 新規チャット作成ボタン削除済み */}
 
       <nav
         style={{

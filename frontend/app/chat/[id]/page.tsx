@@ -2,20 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { CHAT_THREADS } from "@/lib/mock-data";
+import { getAllChatThreads, getStoredChatMessages, saveChatMessages, type StoredChatMessage } from "@/lib/chat-storage";
 
-export default function ChatDetailPage() {
-  const router = useRouter();
-  const params = useParams<{ id: string }>();
-  const threadId = Number(params.id);
+const QUICK_REPLIES = ["ありがとうございます！", "今夜なら対応できます", "詳細を教えてください", "一度通話しませんか？"];
 
-  const thread = CHAT_THREADS.find((item) => item.id === threadId);
-  const [messages, setMessages] = useState([
+function getDefaultMessages(preview?: string, time?: string): StoredChatMessage[] {
+  return [
     {
       id: 1,
       mine: false,
-      text: thread?.preview ?? "",
-      time: thread?.time ?? "今",
+      text: preview ?? "",
+      time: time ?? "今",
     },
     {
       id: 2,
@@ -23,16 +20,36 @@ export default function ChatDetailPage() {
       text: "了解です。詳細をこのスレッドで進めましょう。",
       time: "今",
     },
-  ]);
+  ];
+}
+
+export default function ChatDetailPage() {
+  const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const threadId = Number(params.id);
+
+  const thread = getAllChatThreads().find((item) => item.id === threadId);
+  const [messages, setMessages] = useState<StoredChatMessage[]>(() =>
+    getStoredChatMessages(threadId, getDefaultMessages(thread?.preview, thread?.time)),
+  );
   const [draft, setDraft] = useState("");
+  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
 
-  const handleSend = () => {
-    const nextText = draft.trim();
+  useEffect(() => {
+    if (!thread) {
+      return;
+    }
+
+    saveChatMessages(thread.id, messages);
+  }, [messages, thread]);
+
+  const handleSend = (value?: string) => {
+    const nextText = (value ?? draft).trim();
     if (!nextText) return;
 
     setMessages((prev) => [
@@ -45,6 +62,20 @@ export default function ChatDetailPage() {
       },
     ]);
     setDraft("");
+    setIsPartnerTyping(true);
+
+    window.setTimeout(() => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          mine: false,
+          text: "確認しました。ここから詳細を詰めていきましょう。",
+          time: "今",
+        },
+      ]);
+      setIsPartnerTyping(false);
+    }, 900);
   };
 
   if (!thread) {
@@ -112,14 +143,47 @@ export default function ChatDetailPage() {
 
       <section
         style={{
+          margin: "14px 16px 0",
+          padding: "14px",
+          borderRadius: 18,
+          background: "#171717",
+          border: "1px solid #262626",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <p style={{ margin: 0, color: "#8a8a8a", fontSize: "0.74rem", letterSpacing: "0.08em" }}>PROJECT CONTEXT</p>
+            <h2 style={{ margin: "6px 0 0", fontSize: "0.96rem" }}>{thread.project}</h2>
+          </div>
+          <span
+            style={{
+              borderRadius: 999,
+              background: "#202020",
+              border: "1px solid #313131",
+              color: "#d0d0d0",
+              padding: "7px 10px",
+              fontSize: "0.74rem",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {thread.role}
+          </span>
+        </div>
+      </section>
+
+      <section
+        style={{
           flex: 1,
           overflowY: "auto",
-          padding: "18px 16px 90px",
+          padding: "18px 16px 186px",
           display: "flex",
           flexDirection: "column",
           gap: 12,
         }}
       >
+        <div style={{ alignSelf: "center", color: "#777777", fontSize: "0.75rem", marginBottom: 4 }}>
+          今日
+        </div>
         {messages.map((message) => {
           if (message.mine) {
             return (
@@ -225,6 +289,46 @@ export default function ChatDetailPage() {
             </div>
           );
         })}
+        {isPartnerTyping ? (
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                border: "2px solid #1f4f26",
+                background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
+                color: "#2b1f1c",
+                display: "grid",
+                placeItems: "center",
+                fontSize: "0.8rem",
+                fontWeight: 800,
+                flexShrink: 0,
+              }}
+            >
+              {thread.avatar}
+            </div>
+            <div
+              style={{
+                background: "#1a1a1a",
+                border: "1px solid #2a2a2a",
+                color: "#aaaaaa",
+                borderRadius: 16,
+                padding: "10px 12px",
+                fontSize: "0.84rem",
+              }}
+            >
+              入力中...
+            </div>
+          </div>
+        ) : null}
         <div ref={endOfMessagesRef} />
       </section>
 
@@ -241,6 +345,7 @@ export default function ChatDetailPage() {
           background: "#111111",
         }}
       >
+        {/* クイックリプライ削除済み */}
         <form
           onSubmit={(event) => {
             event.preventDefault();
