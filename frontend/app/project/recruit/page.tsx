@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { HOME_CATEGORIES } from "@/lib/mock-data";
 
 function isAllCategory(category: string) {
@@ -30,6 +30,11 @@ const PRESET_SKILLS = [
   "データ分析",
 ];
 
+const MAX_IMAGE_SIZE_MB = 5;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+const TITLE_MAX = 60;
+const DESCRIPTION_MAX = 400;
+
 export default function ProjectRecruitPage() {
   const router = useRouter();
   const categoryOptions = useMemo(() => {
@@ -45,14 +50,36 @@ export default function ProjectRecruitPage() {
   const [status, setStatus] = useState(STATUS_OPTIONS[0]?.value ?? "ONGOING");
   const [projectImage, setProjectImage] = useState<string | null>(null);
   const [projectImageName, setProjectImageName] = useState("");
+  const [imageError, setImageError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const canSubmit = title.trim() !== "" && description.trim() !== "" && skills.length > 0;
+  const trimmedTitle = title.trim();
+  const trimmedDescription = description.trim();
+  const canSubmit =
+    trimmedTitle.length >= 3 &&
+    trimmedDescription.length >= 10 &&
+    skills.length > 0 &&
+    !imageError &&
+    !isSubmitting;
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
+
+    if (!file.type.startsWith("image/")) {
+      setImageError("画像ファイルを選択してください。");
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setImageError(`画像サイズは${MAX_IMAGE_SIZE_MB}MB以下にしてください。`);
+      return;
+    }
+
+    setImageError("");
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -65,12 +92,48 @@ export default function ProjectRecruitPage() {
   const clearImage = () => {
     setProjectImage(null);
     setProjectImageName("");
+    setImageError("");
   };
 
   const toggleSkill = (skill: string) => {
     setSkills((prev) =>
       prev.includes(skill) ? prev.filter((item) => item !== skill) : [...prev, skill],
     );
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFormError("");
+
+    if (!canSubmit) {
+      setFormError("必須項目を入力し、スキルを1つ以上選択してください。");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const payload = {
+      title: trimmedTitle,
+      description: trimmedDescription,
+      skills,
+      category,
+      status,
+      image: projectImage,
+      imageName: projectImageName,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      const raw = localStorage.getItem("projectRecruitDrafts");
+      const previous = raw ? (JSON.parse(raw) as unknown[]) : [];
+      const next = [payload, ...previous].slice(0, 30);
+      localStorage.setItem("projectRecruitDrafts", JSON.stringify(next));
+      router.push("/home");
+    } catch {
+      setFormError("保存に失敗しました。もう一度お試しください。");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -99,6 +162,7 @@ export default function ProjectRecruitPage() {
         <h1 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>プロジェクト募集を作成</h1>
       </header>
 
+      <form onSubmit={handleSubmit}>
       <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <label style={{ fontSize: "0.8rem", color: "#8b8b8b" }}>プロジェクト画像</label>
         <div
@@ -163,11 +227,15 @@ export default function ProjectRecruitPage() {
             {projectImageName}
           </p>
         ) : null}
+        {imageError ? (
+          <p style={{ margin: "-4px 0 2px", color: "#ff7d7d", fontSize: "0.78rem" }}>{imageError}</p>
+        ) : null}
 
         <label style={{ fontSize: "0.8rem", color: "#8b8b8b" }}>タイトル</label>
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
+          maxLength={TITLE_MAX}
           style={{
             width: "100%",
             background: "#1a1a1a",
@@ -180,11 +248,15 @@ export default function ProjectRecruitPage() {
             outline: "none",
           }}
         />
+        <p style={{ margin: "-6px 0 2px", color: "#747474", fontSize: "0.75rem", textAlign: "right" }}>
+          {trimmedTitle.length}/{TITLE_MAX}
+        </p>
 
         <label style={{ fontSize: "0.8rem", color: "#8b8b8b" }}>募集内容</label>
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
+          maxLength={DESCRIPTION_MAX}
           style={{
             width: "100%",
             minHeight: 120,
@@ -200,6 +272,9 @@ export default function ProjectRecruitPage() {
             lineHeight: 1.5,
           }}
         />
+        <p style={{ margin: "-6px 0 2px", color: "#747474", fontSize: "0.75rem", textAlign: "right" }}>
+          {trimmedDescription.length}/{DESCRIPTION_MAX}
+        </p>
 
         <label style={{ fontSize: "0.8rem", color: "#8b8b8b" }}>スキル</label>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -300,6 +375,10 @@ export default function ProjectRecruitPage() {
         </div>
       </section>
 
+      {formError ? (
+        <p style={{ margin: "12px 0 0", color: "#ff7d7d", fontSize: "0.83rem" }}>{formError}</p>
+      ) : null}
+
       <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
         <button
           type="button"
@@ -318,8 +397,7 @@ export default function ProjectRecruitPage() {
           キャンセル
         </button>
         <button
-          type="button"
-          onClick={() => router.push("/home")}
+          type="submit"
           style={{
             flex: 1,
             borderRadius: 12,
@@ -331,10 +409,12 @@ export default function ProjectRecruitPage() {
             cursor: canSubmit ? "pointer" : "default",
             opacity: canSubmit ? 1 : 0.55,
           }}
+          disabled={!canSubmit}
         >
-          作成
+          {isSubmitting ? "作成中..." : "作成"}
         </button>
       </div>
+      </form>
 
       {showSkillPicker ? (
         <div

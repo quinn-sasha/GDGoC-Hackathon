@@ -34,7 +34,7 @@ export const HOME_FEATURED: HomeFeatured = {
   readTime: "12分で読める",
   title: "サステナブル都市建築のこれから",
   description:
-    "垂直型の緑化建築やモジュール工法が、これからの都市生活をどう変えていくのかを探ります...",
+    "垂直緑化やモジュール工法が、これからの都市生活をどう変えていくのかを紹介します。",
   hostInitial: "H",
   hostName: "ホスト名",
   category: "デザイン",
@@ -182,6 +182,10 @@ export type ChatThread = {
   online: boolean;
   accent: string;
   avatar: string;
+  project: string;
+  role: string;
+  unreadCount: number;
+  pinned?: boolean;
 };
 
 export const CHAT_THREADS: ChatThread[] = [
@@ -193,6 +197,10 @@ export const CHAT_THREADS: ChatThread[] = [
     online: true,
     accent: "#6559ff",
     avatar: "大",
+    project: "学生向けハッカソン支援プラットフォーム",
+    role: "フロントエンド",
+    unreadCount: 2,
+    pinned: true,
   },
   {
     id: 2,
@@ -202,6 +210,9 @@ export const CHAT_THREADS: ChatThread[] = [
     online: true,
     accent: "#2f68ff",
     avatar: "S",
+    project: "地域映画祭のビジュアルリブランディング",
+    role: "UIデザイン",
+    unreadCount: 0,
   },
   {
     id: 3,
@@ -211,6 +222,9 @@ export const CHAT_THREADS: ChatThread[] = [
     online: false,
     accent: "#ff8a22",
     avatar: "龍",
+    project: "現代UI/UXにおける生成AI",
+    role: "バックエンド",
+    unreadCount: 1,
   },
   {
     id: 4,
@@ -220,6 +234,9 @@ export const CHAT_THREADS: ChatThread[] = [
     online: false,
     accent: "#3d66ff",
     avatar: "M",
+    project: "都市騒音を可視化するサウンドマップ",
+    role: "モーショングラフィック",
+    unreadCount: 0,
   },
   {
     id: 5,
@@ -229,6 +246,9 @@ export const CHAT_THREADS: ChatThread[] = [
     online: false,
     accent: "#2f4c77",
     avatar: "風",
+    project: "クラフト作家のための展示会予約アプリ",
+    role: "UX設計",
+    unreadCount: 0,
   },
   {
     id: 6,
@@ -238,6 +258,9 @@ export const CHAT_THREADS: ChatThread[] = [
     online: false,
     accent: "#dc4e89",
     avatar: "A",
+    project: "インディーアーティスト向け配信ダッシュボード",
+    role: "AI/データ",
+    unreadCount: 3,
   },
 ];
 
