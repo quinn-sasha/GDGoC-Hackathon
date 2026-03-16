@@ -12,8 +12,9 @@ class UserAdmin(BaseUserAdmin):
     ordering = ("-date_joined",)
     fieldsets = (
         (None, {"fields": ("email", "username", "password")}),
+        ("プロフィール", {"fields": ("profile_bio", "github_url", "icon_image_path")}),
         ("権限", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
-        ("日時", {"fields": ("date_joined",)}),
+        ("日時", {"fields": ("date_joined", "updated_at")}),
     )
     add_fieldsets = (
         (None, {
@@ -21,7 +22,7 @@ class UserAdmin(BaseUserAdmin):
             "fields": ("email", "username", "password1", "password2", "is_active", "is_staff"),
         }),
     )
-    readonly_fields = ("date_joined",)
+    readonly_fields = ("date_joined", "updated_at")
 
 
 @admin.register(EmailVerificationToken)

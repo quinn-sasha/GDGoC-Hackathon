@@ -38,8 +38,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "このユーザーネームはシステムで予約されているため使用できません。"
             )
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("このユーザー名は既に使用されています")
         return value
 
     def create(self, validated_data):
