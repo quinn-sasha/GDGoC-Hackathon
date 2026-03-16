@@ -266,14 +266,14 @@ export type ProfileSummary = {
 export const PROFILE_SUMMARY: ProfileSummary = {
   name: "Alex Dev",
   handle: "@alexcodez",
-  bio: "Full-stack wizard looking for a UI designer for a fintech side hustle. Coffee & Code ☕",
+  bio: "フルスタックエンジニア。フィンテックのサイドプロジェクトで協力できるUIデザイナーを募集中。コードとコーヒーが好き☕",
   avatarInitial: "A",
 };
 
 export const PROFILE_STATS: ProfileStat[] = [
-  { label: "Projects", value: "12" },
-  { label: "Followers", value: "450" },
-  { label: "Views", value: "1.2k" },
+  { label: "プロジェクト", value: "12" },
+  { label: "フォロワー", value: "450" },
+  { label: "閲覧数", value: "1.2k" },
 ];
 
 export const PROFILE_SKILLS = ["SwiftUI", "Node.js", "Firebase", "Figma", "Python", "AWS", "+"];
@@ -281,72 +281,72 @@ export const PROFILE_SKILLS = ["SwiftUI", "Node.js", "Firebase", "Figma", "Pytho
 export const PROFILE_PROJECTS: ProfileProject[] = [
   {
     name: "CryptoTracker",
-    meta: "Fintech · iOS",
+    meta: "フィンテック · iOS",
     description:
-      "Building a privacy-first portfolio tracker that doesn't sell your data. Need help with UI/UX.",
-    badge: "BACKEND ROLE",
+      "プライバシー重視の暗号資産ポートフォリオトラッカー。データを売らない設計にコダワッテいます。UI/UXの協力者を募集中。",
+    badge: "バックエンド",
     initial: "C",
     accent: "#8b5cf6",
-    members: "+2 others",
+    members: "+2人",
   },
   {
     name: "PlantMom",
-    meta: "Lifestyle · AI",
+    meta: "ライフスタイル · AI",
     description:
-      "AI plant identification app using TensorFlow Lite. Currently refining the model accuracy.",
-    badge: "LEAD DEV",
+      "TensorFlow Liteを使ったAI植物判定アプリ。現在はモデルの認識筏度を改善中です。",
+    badge: "リードDev",
     initial: "P",
     accent: "#22c55e",
-    members: "Just me",
+    members: "自分のみ",
   },
   {
     name: "CampusConnect",
-    meta: "Community · Web",
+    meta: "コミュニティ · Web",
     description:
       "学内イベントとサークル募集をまとめて見つけられる学生向けコミュニティアプリ。通知設計と参加導線を調整中です。",
-    badge: "PRODUCT DESIGN",
+    badge: "プロダクト設計",
     initial: "C",
     accent: "#0f766e",
-    members: "+4 others",
+    members: "+4人",
   },
   {
     name: "MoodMeals",
-    meta: "Health · Mobile",
+    meta: "ヘルス · モバイル",
     description:
-      "気分や体調に合わせてレシピを提案する食事サポートアプリ。食材推薦ロジックとオンボーディングを開発しています。",
-    badge: "LEAD DEV",
+      "気分や体調に合わせてレシピを提案する餅事サポートアプリ。食材推蕘ロジックとオンボーディングを開発しています。",
+    badge: "リードDev",
     initial: "M",
     accent: "#f97316",
-    members: "+1 other",
+    members: "+1人",
   },
   {
     name: "ArchiveLens",
-    meta: "Culture · AI",
+    meta: "文化 · AI",
     description:
       "地域アーカイブ資料をOCRと要約で探索しやすくする検索ツール。博物館展示との連携案も検証中です。",
-    badge: "RESEARCH",
+    badge: "リサーチ",
     initial: "A",
     accent: "#2563eb",
-    members: "+3 others",
+    members: "+3人",
   },
   {
     name: "GreenRoute",
-    meta: "Sustainability · Map",
+    meta: "サステナビリティ · 地図",
     description:
-      "徒歩や自転車で移動しやすいルートを、日陰や混雑度も含めて提案するナビゲーションサービスの試作です。",
-    badge: "BACKEND ROLE",
+      "徒歩や自転車で移動しやすいルートを、日陛や混雑度も含めて提案するナビゲーションサービスの試作です。",
+    badge: "バックエンド",
     initial: "G",
     accent: "#16a34a",
-    members: "+2 others",
+    members: "+2人",
   },
   {
     name: "SceneNote",
-    meta: "Film · Creator Tools",
+    meta: "映像 · クリエイターツール",
     description:
       "映像制作者向けにショットメモ、進行表、素材リンクを一元管理できる軽量な制作ノートアプリを作っています。",
-    badge: "FRONTEND ROLE",
+    badge: "フロントエンド",
     initial: "S",
     accent: "#9333ea",
-    members: "+5 others",
+    members: "+5人",
   },
 ];

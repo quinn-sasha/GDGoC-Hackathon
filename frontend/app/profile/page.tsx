@@ -31,9 +31,10 @@ export default function ProfilePage() {
           padding: "16px 20px 8px",
         }}
       >
-        <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800 }}>Profile</h1>
+        <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800 }}>プロフィール</h1>
         <button
-          aria-label="Settings"
+          aria-label="設定"
+          onClick={() => router.push("/profile/edit")}
           style={{ background: "none", border: "none", color: "#888888", cursor: "pointer", padding: 4 }}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -73,28 +74,6 @@ export default function ProfilePage() {
           >
             {PROFILE_SUMMARY.avatarInitial}
           </div>
-          <button
-            aria-label="Edit profile"
-            style={{
-              position: "absolute",
-              right: 2,
-              bottom: 12,
-              width: 42,
-              height: 42,
-              borderRadius: "50%",
-              border: "2px solid #111111",
-              background: "#8aff1d",
-              color: "#111111",
-              display: "grid",
-              placeItems: "center",
-              fontSize: "1rem",
-              fontWeight: 800,
-              boxShadow: "0 8px 18px rgba(0, 0, 0, 0.25)",
-              cursor: "pointer",
-            }}
-          >
-            &lt;&gt;
-          </button>
         </div>
 
         <h2 style={{ margin: "22px 0 0", fontSize: "1.8rem", fontWeight: 800 }}>{PROFILE_SUMMARY.name}</h2>
@@ -125,25 +104,21 @@ export default function ProfilePage() {
       </section>
 
       <section style={{ padding: "28px 20px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>Skills</h3>
-          <button style={{ background: "none", border: "none", color: "#7dff2b", fontSize: "0.95rem", cursor: "pointer" }}>
-            Edit
-          </button>
+        <div style={{ marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>スキル</h3>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {SKILLS.map((skill) => {
-            const isAdd = skill === "+";
+          {SKILLS.filter((skill) => skill !== "+").map((skill) => {
             const isEmphasis = ["SwiftUI", "Node.js", "Firebase"].includes(skill);
             return (
               <button
                 key={skill}
                 style={{
-                  background: isAdd ? "transparent" : isEmphasis ? "#152413" : "#1a1a1a",
-                  border: isAdd ? "1px dashed #666666" : `1px solid ${isEmphasis ? "#295b22" : "#333333"}`,
-                  color: isAdd ? "#888888" : isEmphasis ? "#7dff2b" : "#d0d0d0",
+                  background: isEmphasis ? "#152413" : "#1a1a1a",
+                  border: `1px solid ${isEmphasis ? "#295b22" : "#333333"}`,
+                  color: isEmphasis ? "#7dff2b" : "#d0d0d0",
                   borderRadius: 999,
-                  padding: isAdd ? "9px 15px" : "9px 16px",
+                  padding: "9px 16px",
                   fontSize: "0.84rem",
                   cursor: "pointer",
                 }}
@@ -157,10 +132,7 @@ export default function ProfilePage() {
 
       <section style={{ padding: "34px 20px 0" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>Current Projects</h3>
-          <button style={{ background: "none", border: "none", color: "#888888", fontSize: "0.95rem", cursor: "pointer" }}>
-            See All
-          </button>
+          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>参加中のプロジェクト</h3>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -199,9 +171,9 @@ export default function ProfilePage() {
                   style={{
                     flexShrink: 0,
                     borderRadius: 999,
-                    border: `1px solid ${project.badge === "LEAD DEV" ? "#295b22" : "#2d3f7a"}`,
-                    background: project.badge === "LEAD DEV" ? "#152413" : "#141b31",
-                    color: project.badge === "LEAD DEV" ? "#7dff2b" : "#7aa4ff",
+                    border: `1px solid ${project.badge === "リードDev" ? "#295b22" : "#2d3f7a"}`,
+                    background: project.badge === "リードDev" ? "#152413" : "#141b31",
+                    color: project.badge === "リードDev" ? "#7dff2b" : "#7aa4ff",
                     padding: "5px 10px",
                     fontSize: "0.68rem",
                     fontWeight: 700,
@@ -227,28 +199,6 @@ export default function ProfilePage() {
           ))}
         </div>
       </section>
-
-      <button
-        aria-label="Add profile item"
-        style={{
-          position: "fixed",
-          right: "max(22px, calc(50vw - 218px))",
-          bottom: 84,
-          width: 72,
-          height: 72,
-          borderRadius: "50%",
-          border: "none",
-          color: "#111111",
-          background: "#ffffff",
-          boxShadow: "0 12px 26px rgba(0, 0, 0, 0.35)",
-          fontSize: "2.4rem",
-          lineHeight: 1,
-          cursor: "pointer",
-          zIndex: 120,
-        }}
-      >
-        +
-      </button>
 
       <nav
         style={{
@@ -285,7 +235,7 @@ export default function ProfilePage() {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
           </svg>
-          <span>Home</span>
+          <span>ホーム</span>
         </button>
         <button
           style={{
@@ -305,7 +255,7 @@ export default function ProfilePage() {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
-          <span>Chat</span>
+          <span>チャット</span>
         </button>
         <button
           style={{
@@ -325,7 +275,7 @@ export default function ProfilePage() {
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
-          <span>Profile</span>
+          <span>プロフィール</span>
         </button>
       </nav>
     </main>
