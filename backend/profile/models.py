@@ -21,13 +21,11 @@ class UserSkill(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="user_skills",
         verbose_name="ユーザー",
     )
     skill = models.ForeignKey(
         TechSkill,
         on_delete=models.CASCADE,
-        related_name="user_skills",
         verbose_name="スキル",
     )
 

@@ -17,6 +17,13 @@ class MyProfileSerializer(serializers.ModelSerializer):
     """自分のプロフィール（email を含む）"""
 
     skills = serializers.SerializerMethodField()
+    skill_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=TechSkill.objects.all(),
+        write_only=True,
+        required=False,
+    )
+    created_at = serializers.DateTimeField(source="date_joined", read_only=True)
 
     class Meta:
         model = User
@@ -28,21 +35,33 @@ class MyProfileSerializer(serializers.ModelSerializer):
             "github_url",
             "icon_image_path",
             "skills",
-            "date_joined",
+            "skill_ids",
+            "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "email", "skills", "date_joined", "updated_at"]
+        read_only_fields = ["id", "email", "updated_at"]
 
     @extend_schema_field(TechSkillSerializer(many=True))
     def get_skills(self, obj):
-        qs = UserSkill.objects.filter(user=obj).select_related("skill")
-        return TechSkillSerializer([us.skill for us in qs], many=True).data
+        return TechSkillSerializer(obj.skills.all(), many=True).data
+
+    def update(self, instance, validated_data):
+        skill_ids = validated_data.pop("skill_ids", None)
+        instance = super().update(instance, validated_data)
+        if skill_ids is not None:
+            UserSkill.objects.filter(user=instance).delete()
+            UserSkill.objects.bulk_create([
+                UserSkill(user=instance, skill=skill)
+                for skill in skill_ids
+            ])
+        return instance
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """他ユーザーのプロフィール（email 非公開）"""
 
     skills = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(source="date_joined", read_only=True)
 
     class Meta:
         model = User
@@ -53,11 +72,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "github_url",
             "icon_image_path",
             "skills",
-            "date_joined",
+            "created_at",
         ]
         read_only_fields = fields
 
     @extend_schema_field(TechSkillSerializer(many=True))
     def get_skills(self, obj):
-        qs = UserSkill.objects.filter(user=obj).select_related("skill")
-        return TechSkillSerializer([us.skill for us in qs], many=True).data
+        return TechSkillSerializer(obj.skills.all(), many=True).data

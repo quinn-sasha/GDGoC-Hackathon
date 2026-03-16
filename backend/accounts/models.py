@@ -33,6 +33,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     profile_bio = models.CharField("プロフィール文", max_length=160, blank=True, default="")
     github_url = models.URLField("GitHub URL", max_length=255, blank=True, default="")
     icon_image_path = models.CharField("アイコン画像パス", max_length=255, blank=True, default="")
+    skills = models.ManyToManyField(
+        "profile.TechSkill",
+        through="profile.UserSkill",
+        blank=True,
+        verbose_name="スキル",
+    )
     is_active = models.BooleanField(
         "アクティブ",
         default=False,
