@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -11,6 +12,7 @@ import {
   type HomeUpdate,
 } from "@/lib/mock-data";
 import { fetchHomeFeed } from "@/lib/home-client";
+import { buildProjectImage } from "@/lib/project-image";
 
 const CATEGORY_LABELS: Record<string, string> = {
   All: "すべて",
@@ -188,10 +190,18 @@ const S = {
     borderRadius: 18,
     overflow: "hidden",
     minHeight: 200,
-    background: "linear-gradient(160deg, #2a4a3e 0%, #1a3028 50%, #0f1e18 100%)",
+    background: "#152126",
     display: "flex",
     flexDirection: "column" as const,
     justifyContent: "flex-end",
+  },
+  featuredImage: {
+    objectFit: "cover" as const,
+  },
+  featuredOverlay: {
+    position: "absolute" as const,
+    inset: 0,
+    background: "linear-gradient(180deg, rgba(8, 12, 14, 0.12) 0%, rgba(8, 12, 14, 0.72) 100%)",
   },
   badgeOngoing: {
     position: "absolute" as const,
@@ -403,7 +413,7 @@ export default function HomePage() {
           ? data.categories
           : HOME_CATEGORIES;
         setCategories(nextCategories);
-        setFeatured(data.featured ?? HOME_FEATURED);
+        setFeatured({ ...HOME_FEATURED, ...(data.featured ?? {}) });
         setUpdates(Array.isArray(data.updates) ? data.updates : HOME_UPDATES);
         setActiveCategory((prev) =>
           nextCategories.includes(prev) ? prev : (nextCategories[0] ?? HOME_CATEGORIES[0] ?? "すべて"),
@@ -458,6 +468,10 @@ export default function HomePage() {
     setShowAllUpdates(false);
   };
 
+  const handleOpenProjectDetail = (projectId: number) => {
+    router.push(`/project/${projectId}`);
+  };
+
   return (
     <div style={S.root}>
       {/* Header */}
@@ -509,7 +523,27 @@ export default function HomePage() {
         {!showAllUpdates ? (
           <section style={S.section}>
             <p style={S.sectionLabel}>あなたへのおすすめ</p>
-            <div style={S.featured}>
+            <div
+              style={{ ...S.featured, cursor: "pointer" }}
+              onClick={() => handleOpenProjectDetail(featured.id)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleOpenProjectDetail(featured.id);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`${featured.title} の詳細へ移動`}
+            >
+              <Image
+                src={buildProjectImage(featured.title, featured.category)}
+                alt={`${featured.title} の背景画像`}
+                fill
+                sizes="(max-width: 480px) 100vw, 480px"
+                style={S.featuredImage}
+              />
+              <div style={S.featuredOverlay} />
               <span style={S.badgeOngoing}>{translateStatus(featured.badge)}</span>
               <div style={S.featuredBottom}>
                 <div style={S.featuredTags}>
@@ -548,7 +582,20 @@ export default function HomePage() {
               </p>
             ) : (
               visibleUpdates.map((u) => (
-              <article key={u.id} style={S.card}>
+              <article
+                key={u.id}
+                style={{ ...S.card, cursor: "pointer" }}
+                onClick={() => handleOpenProjectDetail(u.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleOpenProjectDetail(u.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`${u.title} の詳細へ移動`}
+              >
                 <div style={S.cardTop}>
                   <h4 style={S.cardTitle}>{u.title}</h4>
                   <div style={S.cardRight}>
@@ -605,4 +652,5 @@ export default function HomePage() {
     </div>
   );
 }
+
 

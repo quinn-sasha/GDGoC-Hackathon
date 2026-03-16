@@ -13,6 +13,7 @@ export type HomeUpdate = {
 };
 
 export type HomeFeatured = {
+  id: number;
   badge: string;
   label: string;
   readTime: string;
@@ -20,9 +21,14 @@ export type HomeFeatured = {
   description: string;
   hostInitial: string;
   hostName: string;
+  category: string;
+  statusColor: string;
+  statusBg: string;
+  time: string;
 };
 
 export const HOME_FEATURED: HomeFeatured = {
+  id: 100,
   badge: "進行中",
   label: "注目",
   readTime: "12分で読める",
@@ -31,6 +37,10 @@ export const HOME_FEATURED: HomeFeatured = {
     "垂直型の緑化建築やモジュール工法が、これからの都市生活をどう変えていくのかを探ります...",
   hostInitial: "H",
   hostName: "ホスト名",
+  category: "デザイン",
+  statusColor: "#4fc3a1",
+  statusBg: "#0d2e22",
+  time: "注目プロジェクト",
 };
 
 export const HOME_CATEGORIES = ["すべて", "デザイン", "技術", "アート", "音楽", "映像"];
