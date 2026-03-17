@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import User
-from .models import Chatroom, ChatroomUser, Message
+from .models import Chatroom, ChatroomUser, Message, PersonalChatroom
 
 
 def create_active_user(email, username, password="StrongPass123!"):
@@ -34,6 +34,10 @@ class ConversationAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Chatroom.objects.count(), 1)
         self.assertEqual(response.data["room_type"], "PERSONAL_CHAT")
+        # PersonalChatroom が正規化順序で作成されていることを確認
+        self.assertEqual(PersonalChatroom.objects.count(), 1)
+        pc = PersonalChatroom.objects.first()
+        self.assertLess(pc.user1_id, pc.user2_id)
 
     def test_create_conversation_reuse(self):
         self.client.post(self.list_url, {"user_id": self.user2.id})
@@ -169,3 +173,5 @@ class ConversationAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNotNone(response.data["last_message"])
         self.assertEqual(response.data["last_message"]["content"], "hello")
+        # user1 はメッセージを送ったが mark_read を呼んでいないため unread_count > 0
+        self.assertGreater(response.data["unread_count"], 0)

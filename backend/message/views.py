@@ -1,5 +1,9 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
+
+logger = logging.getLogger(__name__)
 from django.db.models import (
     Case,
     CharField,
@@ -195,6 +199,11 @@ class ConversationViewSet(viewsets.ViewSet):
         except IntegrityError:
             # 競合：別リクエストが先に作成済み → 既存を返す
             # PersonalChatroom 以外の IntegrityError の場合は get() が DoesNotExist を上げるため再 raise する
+            logger.warning(
+                "PersonalChatroom 競合: user1_id=%s, user2_id=%s — 既存ルームを返します",
+                u1_id,
+                u2_id,
+            )
             try:
                 personal = PersonalChatroom.objects.select_related("chatroom").get(
                     user1_id=u1_id, user2_id=u2_id
@@ -316,8 +325,13 @@ class ConversationViewSet(viewsets.ViewSet):
         if err:
             return err
 
-        latest_message = chatroom.messages.order_by("-created_at").first()
-        membership.last_read_message = latest_message
-        membership.save(update_fields=["last_read_message"])
+        # サブクエリで最新メッセージ ID を直接 DB に反映（追加 SELECT なし）
+        ChatroomUser.objects.filter(pk=membership.pk).update(
+            last_read_message_id=Subquery(
+                Message.objects.filter(chatroom=chatroom)
+                .order_by("-created_at")
+                .values("id")[:1]
+            )
+        )
 
         return Response({"detail": "既読にしました。"}, status=status.HTTP_200_OK)
