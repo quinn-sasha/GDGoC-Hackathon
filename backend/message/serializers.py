@@ -36,33 +36,39 @@ class ConversationListSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def _get_my_membership(self, obj):
+    def _get_members_info(self, obj):
+        """prefetchキャッシュを1回走査して自分・相手のメンバー情報を返す。
+        Returns (my_membership, other_member) タプル。
+        """
         request = self.context.get("request")
         if not request:
-            return None
+            return None, None
+        my_membership = None
+        other_member = None
         for member in obj.members.all():
             if member.user_id == request.user.id:
-                return member
-        return None
+                my_membership = member
+            else:
+                other_member = member
+        return my_membership, other_member
 
     def get_other_user(self, obj):
         if obj.room_type != Chatroom.RoomType.PERSONAL_CHAT:
             return None
-        request = self.context.get("request")
-        for member in obj.members.all():
-            if member.user_id != request.user.id:
-                user = member.user
-                return {
-                    "id": user.id,
-                    "username": user.username,
-                    "icon_image_path": user.icon_image_path,
-                }
-        return None
+        _, other = self._get_members_info(obj)
+        if other is None:
+            return None
+        user = other.user
+        return {
+            "id": user.id,
+            "username": user.username,
+            "icon_image_path": user.icon_image_path,
+        }
 
     def get_last_message(self, obj):
         # list() では messages_cache（Prefetch to_attr）を使うため N+1 が発生しない。
         # create() など非プリフェッチ時はフォールバッククエリを使用。
-        msgs = getattr(obj, "messages_cache", None)
+        msgs = getattr(obj, Chatroom.MESSAGES_PREFETCH_ATTR, None)
         if msgs is not None:
             if not msgs:
                 return None
@@ -79,12 +85,12 @@ class ConversationListSerializer(serializers.ModelSerializer):
         }
 
     def get_unread_count(self, obj):
-        membership = self._get_my_membership(obj)
+        membership, _ = self._get_members_info(obj)
         if membership is None:
             return 0
         # list() では messages_cache を使って Python 側で計算（N+1 回避）。
         # uuid7 は時刻順にソート可能なため id 比較が正確。
-        msgs = getattr(obj, "messages_cache", None)
+        msgs = getattr(obj, Chatroom.MESSAGES_PREFETCH_ATTR, None)
         if msgs is not None:
             if membership.last_read_message is None:
                 return len(msgs)
