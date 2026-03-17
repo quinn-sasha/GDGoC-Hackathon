@@ -1,10 +1,12 @@
 from django.conf import settings
 from django.db import models
-from django.utils import timezone
 from uuid6 import uuid7
 
 
 class Chatroom(models.Model):
+    # Prefetch to_attr 名。views と serializers で共有して文字列の分散を防ぐ。
+    MESSAGES_PREFETCH_ATTR = "messages_cache"
+
     class RoomType(models.TextChoices):
         PROJECT_CHAT = "PROJECT_CHAT", "プロジェクトチャット"
         PERSONAL_CHAT = "PERSONAL_CHAT", "個人チャット"
@@ -24,9 +26,7 @@ class Chatroom(models.Model):
         verbose_name="プロジェクト",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
-    # メッセージ送信時のみ更新する（views で queryset.update() を使うこと）。
-    # chatroom.save() では自動更新されないので注意。
-    updated_at = models.DateTimeField(default=timezone.now, verbose_name="更新日時")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")
 
     class Meta:
         verbose_name = "チャットルーム"
@@ -94,3 +94,44 @@ class ChatroomUser(models.Model):
 
     def __str__(self):
         return f"{self.user.username} in {self.chatroom}"
+
+
+class PersonalChatroom(models.Model):
+    """PERSONAL_CHAT のユーザーペアを一意に管理する。
+    user1_id < user2_id の正規化順序で保存し、unique_together により
+    DB レベルで重複作成を防ぐ。
+    """
+
+    chatroom = models.OneToOneField(
+        Chatroom,
+        on_delete=models.CASCADE,
+        related_name="personal_info",
+        verbose_name="チャットルーム",
+    )
+    # user1_id < user2_id となるよう保存（create() で正規化すること）
+    user1 = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name="ユーザー1",
+    )
+    user2 = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name="ユーザー2",
+    )
+
+    class Meta:
+        verbose_name = "個人チャット"
+        verbose_name_plural = "個人チャット"
+        unique_together = [("user1", "user2")]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(user1__lt=models.F("user2")),
+                name="personal_chatroom_user1_lt_user2",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user1.username} ↔ {self.user2.username}"

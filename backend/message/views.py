@@ -1,16 +1,30 @@
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Prefetch
-from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import CursorPagination
+from rest_framework.pagination import CursorPagination, PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Chatroom, ChatroomUser, Message
+from .models import Chatroom, ChatroomUser, Message, PersonalChatroom
 from .serializers import ConversationListSerializer, MessageSerializer
+
+
+def _messages_prefetch() -> Prefetch:
+    """会話一覧用の messages Prefetch を返す。to_attr は Chatroom.MESSAGES_PREFETCH_ATTR で一元管理。"""
+    return Prefetch(
+        "messages",
+        queryset=Message.objects.select_related("sender").order_by("created_at"),
+        to_attr=Chatroom.MESSAGES_PREFETCH_ATTR,
+    )
+
+
+class ConversationPageNumberPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class MessageCursorPagination(CursorPagination):
@@ -35,18 +49,16 @@ class ConversationViewSet(viewsets.ViewSet):
             .prefetch_related(
                 "members__user",
                 "members__last_read_message",
-                Prefetch(
-                    "messages",
-                    queryset=Message.objects.select_related("sender").order_by("created_at"),
-                    to_attr="messages_cache",
-                ),
+                _messages_prefetch(),
             )
             .order_by("-updated_at")
         )
+        paginator = ConversationPageNumberPagination()
+        page = paginator.paginate_queryset(chatrooms, request)
         serializer = ConversationListSerializer(
-            chatrooms, many=True, context={"request": request}
+            page, many=True, context={"request": request}
         )
-        return Response(serializer.data)
+        return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(
         tags=["メッセージ"],
@@ -63,7 +75,7 @@ class ConversationViewSet(viewsets.ViewSet):
     )
     def create(self, request):
         user_id = request.data.get("user_id")
-        if not user_id:
+        if user_id is None:
             return Response(
                 {"detail": "user_id は必須です。"}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -83,35 +95,58 @@ class ConversationViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # 同時リクエストによる重複作成を防ぐため atomic + select_for_update でロック
-        with transaction.atomic():
-            existing = (
-                Chatroom.objects.select_for_update()
-                .filter(
-                    room_type=Chatroom.RoomType.PERSONAL_CHAT,
-                    members__user=request.user,
-                )
-                .filter(members__user=other_user)
+        # user1_id < user2_id に正規化してペアを一意に表現する
+        u1_id, u2_id = sorted([request.user.id, other_user.id])
+
+        # 既存ルームの確認
+        try:
+            personal = PersonalChatroom.objects.select_related("chatroom").get(
+                user1_id=u1_id, user2_id=u2_id
+            )
+            chatroom_with_prefetch = (
+                Chatroom.objects.filter(id=personal.chatroom_id)
+                .prefetch_related("members__user", "members__last_read_message", _messages_prefetch())
                 .first()
             )
-            if existing:
-                chatroom_with_prefetch = (
-                    Chatroom.objects.filter(id=existing.id)
-                    .prefetch_related("members__user", "members__last_read_message")
-                    .first()
-                )
-                serializer = ConversationListSerializer(
-                    chatroom_with_prefetch, context={"request": request}
-                )
-                return Response(serializer.data, status=status.HTTP_200_OK)
+            serializer = ConversationListSerializer(
+                chatroom_with_prefetch, context={"request": request}
+            )
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except PersonalChatroom.DoesNotExist:
+            pass
 
-            chatroom = Chatroom.objects.create(room_type=Chatroom.RoomType.PERSONAL_CHAT)
-            ChatroomUser.objects.create(chatroom=chatroom, user=request.user)
-            ChatroomUser.objects.create(chatroom=chatroom, user=other_user)
+        # 新規作成。PersonalChatroom の unique_together が DB 制約として働き、
+        # 同時リクエストによる重複作成は IntegrityError で検出できる。
+        try:
+            with transaction.atomic():
+                chatroom = Chatroom.objects.create(room_type=Chatroom.RoomType.PERSONAL_CHAT)
+                ChatroomUser.objects.create(chatroom=chatroom, user=request.user)
+                ChatroomUser.objects.create(chatroom=chatroom, user=other_user)
+                PersonalChatroom.objects.create(
+                    chatroom=chatroom, user1_id=u1_id, user2_id=u2_id
+                )
+        except IntegrityError:
+            # 競合：別リクエストが先に作成済み → 既存を返す
+            # PersonalChatroom 以外の IntegrityError の場合は get() が DoesNotExist を上げるため再 raise する
+            try:
+                personal = PersonalChatroom.objects.select_related("chatroom").get(
+                    user1_id=u1_id, user2_id=u2_id
+                )
+            except PersonalChatroom.DoesNotExist:
+                raise
+            chatroom_with_prefetch = (
+                Chatroom.objects.filter(id=personal.chatroom_id)
+                .prefetch_related("members__user", "members__last_read_message", _messages_prefetch())
+                .first()
+            )
+            serializer = ConversationListSerializer(
+                chatroom_with_prefetch, context={"request": request}
+            )
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         chatroom_with_prefetch = (
             Chatroom.objects.filter(id=chatroom.id)
-            .prefetch_related("members__user", "members__last_read_message")
+            .prefetch_related("members__user", "members__last_read_message", _messages_prefetch())
             .first()
         )
         serializer = ConversationListSerializer(
@@ -120,22 +155,25 @@ class ConversationViewSet(viewsets.ViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def _get_chatroom_for_member(self, pk, user):
-        """チャットルームを取得し、メンバー確認も行うヘルパー。
-        Returns (chatroom, error_response) のタプル。エラーがなければ error_response は None。
+        """チャットルームとメンバーシップを取得するヘルパー。
+        Returns (chatroom, membership, error_response) のタプル。
+        エラーがなければ error_response は None。
         """
         try:
             chatroom = Chatroom.objects.get(pk=pk)
         except Chatroom.DoesNotExist:
-            return None, Response(
+            return None, None, Response(
                 {"detail": "チャットルームが見つかりません。"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        if not chatroom.members.filter(user=user).exists():
-            return None, Response(
+        try:
+            membership = chatroom.members.get(user=user)
+        except ChatroomUser.DoesNotExist:
+            return None, None, Response(
                 {"detail": "このチャットルームへのアクセス権限がありません。"},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        return chatroom, None
+        return chatroom, membership, None
 
     @extend_schema(
         methods=["get"],
@@ -164,7 +202,7 @@ class ConversationViewSet(viewsets.ViewSet):
     )
     @action(detail=True, methods=["get", "post"], url_path="messages", url_name="messages")
     def messages(self, request, pk=None):
-        chatroom, err = self._get_chatroom_for_member(pk, request.user)
+        chatroom, _, err = self._get_chatroom_for_member(pk, request.user)
         if err:
             return err
 
@@ -191,7 +229,7 @@ class ConversationViewSet(viewsets.ViewSet):
             sender=request.user,
             content=content,
         )
-        Chatroom.objects.filter(id=chatroom.id).update(updated_at=timezone.now())
+        chatroom.save(update_fields=["updated_at"])
 
         serializer = MessageSerializer(message)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -207,21 +245,9 @@ class ConversationViewSet(viewsets.ViewSet):
     )
     @action(detail=True, methods=["patch"], url_path="mark-read")
     def mark_read(self, request, pk=None):
-        try:
-            chatroom = Chatroom.objects.get(pk=pk)
-        except Chatroom.DoesNotExist:
-            return Response(
-                {"detail": "チャットルームが見つかりません。"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        try:
-            membership = chatroom.members.get(user=request.user)
-        except ChatroomUser.DoesNotExist:
-            return Response(
-                {"detail": "このチャットルームへのアクセス権限がありません。"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        chatroom, membership, err = self._get_chatroom_for_member(pk, request.user)
+        if err:
+            return err
 
         latest_message = chatroom.messages.order_by("-created_at").first()
         membership.last_read_message = latest_message
