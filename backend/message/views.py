@@ -123,7 +123,17 @@ class ConversationViewSet(viewsets.ViewSet):
     @extend_schema(
         tags=["メッセージ"],
         summary="会話一覧取得",
-        responses={200: ConversationListSerializer(many=True)},
+        responses={
+            200: inline_serializer(
+                name="PaginatedConversationList",
+                fields={
+                    "count": serializers.IntegerField(),
+                    "next": serializers.CharField(allow_null=True),
+                    "previous": serializers.CharField(allow_null=True),
+                    "results": ConversationListSerializer(many=True),
+                },
+            )
+        },
     )
     def list(self, request):
         chatrooms = _annotate_conversations(
@@ -261,7 +271,14 @@ class ConversationViewSet(viewsets.ViewSet):
         tags=["メッセージ"],
         summary="メッセージ一覧取得",
         responses={
-            200: MessageSerializer(many=True),
+            200: inline_serializer(
+                name="CursorPaginatedMessageList",
+                fields={
+                    "next": serializers.CharField(allow_null=True),
+                    "previous": serializers.CharField(allow_null=True),
+                    "results": MessageSerializer(many=True),
+                },
+            ),
             403: OpenApiResponse(description="アクセス権限なし"),
             404: OpenApiResponse(description="チャットルームが見つかりません"),
         },
@@ -303,6 +320,11 @@ class ConversationViewSet(viewsets.ViewSet):
         if not content:
             return Response(
                 {"detail": "content は必須です。"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        if len(content) > 10000:
+            return Response(
+                {"detail": "content は10000文字以内にしてください。"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         message = Message.objects.create(
