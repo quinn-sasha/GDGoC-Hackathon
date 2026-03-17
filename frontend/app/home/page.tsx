@@ -7,11 +7,12 @@ import {
   HOME_CATEGORIES,
   HOME_FEATURED,
   HOME_UPDATES,
-  PROFILE_PROJECTS,
   PROFILE_SUMMARY,
   type HomeFeatured,
   type HomeUpdate,
 } from "@/lib/mock-data";
+import { fetchProfileAll } from "@/lib/profile-extra-api";
+import { joinProject } from "@/lib/project-api";
 import { fetchHomeFeed } from "@/lib/home-client";
 import { buildProjectImage } from "@/lib/project-image";
 
@@ -549,6 +550,7 @@ export default function HomePage() {
   const [categories, setCategories] = useState<string[]>(HOME_CATEGORIES);
   const [featured, setFeatured] = useState<HomeFeatured>(HOME_FEATURED);
   const [updates, setUpdates] = useState<HomeUpdate[]>(HOME_UPDATES);
+  const [profileProjects, setProfileProjects] = useState([]);
   const [fetchError, setFetchError] = useState("");
   const [showAllUpdates, setShowAllUpdates] = useState(false);
   const [sortMode, setSortMode] = useState<"new" | "old" | "title">("new");
@@ -604,29 +606,32 @@ export default function HomePage() {
     const loadHomeFeed = async () => {
       try {
         const data = await fetchHomeFeed();
-        if (!isMounted) {
-          return;
-        }
-
-        const nextCategories = data.categories?.length
-          ? data.categories
-          : HOME_CATEGORIES;
+        if (!isMounted) return;
+        const nextCategories = data.categories?.length ? data.categories : HOME_CATEGORIES;
         setCategories(nextCategories);
         setFeatured({ ...HOME_FEATURED, ...(data.featured ?? {}) });
         setUpdates(Array.isArray(data.updates) ? data.updates : HOME_UPDATES);
-        setActiveCategory((prev) =>
-          nextCategories.includes(prev) ? prev : (nextCategories[0] ?? HOME_CATEGORIES[0] ?? "すべて"),
-        );
+        setActiveCategory((prev) => nextCategories.includes(prev) ? prev : (nextCategories[0] ?? HOME_CATEGORIES[0] ?? "すべて"));
         setFetchError("");
       } catch {
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
         setFetchError("最新の更新を同期できませんでした。保存済みデータを表示しています。");
       }
     };
 
+    const loadProfileProjects = async () => {
+      try {
+        const data = await fetchProfileAll();
+        if (!isMounted) return;
+        setProfileProjects(Array.isArray(data.projects) ? data.projects : []);
+      } catch {
+        if (!isMounted) return;
+        setProfileProjects([]);
+      }
+    };
+
     loadHomeFeed();
+    loadProfileProjects();
 
     return () => {
       isMounted = false;
@@ -721,7 +726,7 @@ export default function HomePage() {
       <header style={S.header}>
         <div
           style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
-          onClick={() => router.push("/profile")}
+          onClick={() => router.push(`/profile/${PROFILE_SUMMARY.handle}`)}
         >
           <div style={S.avatarLg}>{PROFILE_SUMMARY.avatarInitial}</div>
           <span style={{ fontSize: "1rem", fontWeight: 700, color: "#ffffff" }}>{PROFILE_SUMMARY.name}</span>
@@ -924,7 +929,7 @@ export default function HomePage() {
             <h3 style={S.sectionTitle}>参加中のプロジェクト</h3>
           </div>
           <div style={S.updates}>
-            {PROFILE_PROJECTS.slice(0, 3).map((project) => (
+            {profileProjects.slice(0, 3).map((project: any) => (
               <article key={project.name} style={{ ...S.card, borderLeft: `6px solid ${project.accent}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
                   <div style={{ ...S.avatarSm, background: project.accent }}>{project.initial}</div>
@@ -933,6 +938,28 @@ export default function HomePage() {
                     <span style={{ fontSize: "0.78rem", color: "#aaaaaa" }}>{project.meta}</span>
                   </div>
                   <span style={{ ...S.statusBadge("#ffffff", project.accent), fontSize: "0.7rem" }}>{project.badge}</span>
+                  <button
+                    type="button"
+                    style={{
+                      marginLeft: 8,
+                      borderRadius: 8,
+                      border: "none",
+                      background: "#8aff1d",
+                      color: "#111111",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      padding: "7px 14px",
+                      cursor: "pointer",
+                    }}
+                    onClick={async () => {
+                      try {
+                        await joinProject({ projectId: project.id });
+                        alert("プロジェクトに参加しました！");
+                      } catch (e) {
+                        alert("参加に失敗しました");
+                      }
+                    }}
+                  >参加</button>
                 </div>
                 <p style={S.cardDesc}>{project.description}</p>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", color: "#888888" }}>
@@ -962,7 +989,7 @@ export default function HomePage() {
           </svg>
           <span>チャット</span>
         </button>
-        <button style={S.navItem} onClick={() => router.push("/profile")}>
+        <button style={S.navItem} onClick={() => router.push(`/profile/${PROFILE_SUMMARY.handle}`)}> 
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
