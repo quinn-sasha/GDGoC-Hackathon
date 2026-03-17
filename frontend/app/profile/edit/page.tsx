@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PROFILE_SUMMARY, PROFILE_SKILLS } from "@/lib/mock-data";
+import { updateProfile } from "@/lib/profile-api";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -408,9 +409,14 @@ export default function ProfileEditPage() {
       {/* Save button */}
       <div style={{ padding: "36px 20px 0" }}>
         <button
-          onClick={() => {
+          onClick={async () => {
             if (!canSave) return;
-            router.back();
+            try {
+              await updateProfile({ name, handle, bio });
+              router.back();
+            } catch (e) {
+              alert("プロフィール更新に失敗しました");
+            }
           }}
           style={{
             width: "100%",

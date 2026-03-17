@@ -1,15 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-  PROFILE_PROJECTS as PROJECTS,
-  PROFILE_SKILLS as SKILLS,
-  PROFILE_STATS as STATS,
-  PROFILE_SUMMARY,
-} from "@/lib/mock-data";
+
+import { useEffect, useState } from "react";
+import { fetchProfile } from "@/lib/profile-api";
+import { PROFILE_PROJECTS as PROJECTS, PROFILE_SKILLS as SKILLS, PROFILE_STATS as STATS } from "@/lib/mock-data";
 
 export default function ProfilePage() {
   const router = useRouter();
+
+  const [profile, setProfile] = useState({ name: "", handle: "", bio: "", avatarInitial: "" });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchProfile()
+      .then((data) => {
+        setProfile(data);
+        setLoading(false);
+      })
+      .catch((e) => {
+        setError("プロフィール取得に失敗しました");
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <main
@@ -44,43 +58,52 @@ export default function ProfilePage() {
         </button>
       </header>
 
-      <section style={{ padding: "8px 20px 0", textAlign: "center" }}>
-        <div
-          style={{
-            width: 156,
-            height: 156,
-            margin: "0 auto",
-            borderRadius: "50%",
-            border: "6px solid #1f4f26",
-            background: "#1a1a1a",
-            position: "relative",
-            display: "grid",
-            placeItems: "center",
-            boxShadow: "0 10px 28px rgba(0, 0, 0, 0.28)",
-          }}
-        >
-          <div
-            style={{
-              width: 140,
-              height: 140,
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
-              display: "grid",
-              placeItems: "center",
-              fontSize: "2.4rem",
-              fontWeight: 800,
-              color: "#2b1f1c",
-            }}
-          >
-            {PROFILE_SUMMARY.avatarInitial}
-          </div>
-        </div>
 
-        <h2 style={{ margin: "22px 0 0", fontSize: "1.8rem", fontWeight: 800 }}>{PROFILE_SUMMARY.name}</h2>
-        <p style={{ margin: "8px 0 0", color: "#7dff2b", fontSize: "0.95rem", fontWeight: 700 }}>{PROFILE_SUMMARY.handle}</p>
-        <p style={{ margin: "16px auto 0", maxWidth: 320, color: "#aaaaaa", fontSize: "0.85rem", lineHeight: 1.6 }}>
-          {PROFILE_SUMMARY.bio}
-        </p>
+      <section style={{ padding: "8px 20px 0", textAlign: "center" }}>
+        {loading ? (
+          <p style={{ color: "#aaa", marginTop: 40 }}>読み込み中...</p>
+        ) : error ? (
+          <p style={{ color: "#ff7d7d", marginTop: 40 }}>{error}</p>
+        ) : (
+          <>
+            <div
+              style={{
+                width: 156,
+                height: 156,
+                margin: "0 auto",
+                borderRadius: "50%",
+                border: "6px solid #1f4f26",
+                background: "#1a1a1a",
+                position: "relative",
+                display: "grid",
+                placeItems: "center",
+                boxShadow: "0 10px 28px rgba(0, 0, 0, 0.28)",
+              }}
+            >
+              <div
+                style={{
+                  width: 140,
+                  height: 140,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: "2.4rem",
+                  fontWeight: 800,
+                  color: "#2b1f1c",
+                }}
+              >
+                {profile.avatarInitial}
+              </div>
+            </div>
+
+            <h2 style={{ margin: "22px 0 0", fontSize: "1.8rem", fontWeight: 800 }}>{profile.name}</h2>
+            <p style={{ margin: "8px 0 0", color: "#7dff2b", fontSize: "0.95rem", fontWeight: 700 }}>{profile.handle}</p>
+            <p style={{ margin: "16px auto 0", maxWidth: 320, color: "#aaaaaa", fontSize: "0.85rem", lineHeight: 1.6 }}>
+              {profile.bio}
+            </p>
+          </>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 26 }}>
           {STATS.map((stat) => (
