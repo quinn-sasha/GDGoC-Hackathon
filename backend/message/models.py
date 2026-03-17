@@ -23,6 +23,8 @@ class Chatroom(models.Model):
         verbose_name="プロジェクト",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
+    # auto_now=True: chatroom.save() のたびに更新される設計。
+    # メッセージ送信時は update_fields=["updated_at"] を指定して明示的に更新すること。
     updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")
 
     class Meta:

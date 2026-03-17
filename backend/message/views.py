@@ -2,8 +2,6 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
-
-logger = logging.getLogger(__name__)
 from django.db.models import (
     Case,
     CharField,
@@ -26,16 +24,22 @@ from rest_framework.response import Response
 from .models import Chatroom, ChatroomUser, Message, PersonalChatroom
 from .serializers import ConversationListSerializer, MessageSerializer
 
+logger = logging.getLogger(__name__)
+
 
 def _annotate_conversations(queryset, user):
     """会話一覧・単体取得用のクエリセットに last_message / unread_count を DB 集計で付加する。
 
     全メッセージをメモリにロードせず、Subquery / annotate でDB側で集計する。
+
+    NOTE: last_message の各フィールド（id / content / created_at / sender_username）は
+    それぞれ独立したサブクエリとして発行される（計4本）。PostgreSQL が内部でキャッシュする
+    ケースが多く現状は許容範囲と判断している。最適化が必要な場合は JSONObject での集約を検討すること。
     """
     # 最新メッセージ取得用のベースクエリ（4フィールド分のサブクエリで共有）
     latest_msg = Message.objects.filter(chatroom=OuterRef("pk")).order_by("-created_at")
 
-    # 全メッセージ数（last_read_message が NULL のとき unread_count として使用）
+    # 全メッセージ数（_my_last_read_id が NULL のとき unread_count として使用）
     total_msg_count = Subquery(
         Message.objects.filter(chatroom=OuterRef("pk"))
         .order_by()
@@ -45,7 +49,10 @@ def _annotate_conversations(queryset, user):
         output_field=IntegerField(),
     )
 
-    # last_read より後のメッセージ数（last_read が NULL のとき id__gt=NULL で 0 になるため Case で分岐）
+    # last_read より後のメッセージ数（last_read が NULL のとき id__gt=NULL → 0 になるため Case で分岐）
+    # NOTE: Step1 の _my_last_read_id と同じ ChatroomUser サブクエリを内包している。
+    # OuterRef("_my_last_read_id") で参照することで重複を避けられるが、Django ORM のネスト制約から
+    # 実装が複雑になるため意図的に重複を許容している（PostgreSQL が同一サブクエリをキャッシュする）。
     after_last_read_count = Subquery(
         Message.objects.filter(
             chatroom=OuterRef("pk"),
@@ -64,7 +71,8 @@ def _annotate_conversations(queryset, user):
 
     return (
         queryset
-        # Step 1: ユーザーの last_read_message_id を取得（NULL チェック用）
+        # Step 1: ユーザーの last_read_message_id を取得（Step2 の NULL チェック専用）
+        # _my_last_read_id は内部実装用アノテーション。serializer から直接アクセスしないこと。
         .annotate(
             _my_last_read_id=Subquery(
                 ChatroomUser.objects.filter(
@@ -109,6 +117,17 @@ class MessageCursorPagination(CursorPagination):
 
 class ConversationViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
+
+    def _chatroom_response(self, chatroom_id, request, http_status):
+        """単一チャットルームを annotate してシリアライズし Response を返すヘルパー。"""
+        obj = _annotate_conversations(
+            Chatroom.objects.filter(id=chatroom_id).prefetch_related("members__user"),
+            request.user,
+        ).first()
+        return Response(
+            ConversationListSerializer(obj, context={"request": request}).data,
+            status=http_status,
+        )
 
     @extend_schema(
         tags=["メッセージ"],
@@ -173,16 +192,9 @@ class ConversationViewSet(viewsets.ViewSet):
             personal = PersonalChatroom.objects.select_related("chatroom").get(
                 user1_id=u1_id, user2_id=u2_id
             )
-            chatroom_obj = _annotate_conversations(
-                Chatroom.objects.filter(id=personal.chatroom_id).prefetch_related(
-                    "members__user"
-                ),
-                request.user,
-            ).first()
-            serializer = ConversationListSerializer(
-                chatroom_obj, context={"request": request}
+            return self._chatroom_response(
+                personal.chatroom_id, request, status.HTTP_200_OK
             )
-            return Response(serializer.data, status=status.HTTP_200_OK)
         except PersonalChatroom.DoesNotExist:
             pass
 
@@ -210,25 +222,11 @@ class ConversationViewSet(viewsets.ViewSet):
                 )
             except PersonalChatroom.DoesNotExist:
                 raise
-            chatroom_obj = _annotate_conversations(
-                Chatroom.objects.filter(id=personal.chatroom_id).prefetch_related(
-                    "members__user"
-                ),
-                request.user,
-            ).first()
-            serializer = ConversationListSerializer(
-                chatroom_obj, context={"request": request}
+            return self._chatroom_response(
+                personal.chatroom_id, request, status.HTTP_200_OK
             )
-            return Response(serializer.data, status=status.HTTP_200_OK)
 
-        chatroom_obj = _annotate_conversations(
-            Chatroom.objects.filter(id=chatroom.id).prefetch_related("members__user"),
-            request.user,
-        ).first()
-        serializer = ConversationListSerializer(
-            chatroom_obj, context={"request": request}
-        )
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return self._chatroom_response(chatroom.id, request, status.HTTP_201_CREATED)
 
     def _get_chatroom_for_member(self, pk, user):
         """チャットルームとメンバーシップを取得するヘルパー。
