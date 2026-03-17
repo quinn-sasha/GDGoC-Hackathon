@@ -3,14 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  HOME_CATEGORIES,
-  HOME_FEATURED,
-  HOME_UPDATES,
-  PROFILE_SUMMARY,
-  type HomeFeatured,
-  type HomeUpdate,
-} from "@/lib/mock-data";
+import { HOME_CATEGORIES } from "@/lib/mock-data";
 import { fetchProfileAll } from "@/lib/profile-extra-api";
 import { joinProject } from "@/lib/project-api";
 import { fetchHomeFeed } from "@/lib/home-client";
@@ -548,8 +541,8 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState(HOME_CATEGORIES[0] ?? "すべて");
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState<string[]>(HOME_CATEGORIES);
-  const [featured, setFeatured] = useState<HomeFeatured>(HOME_FEATURED);
-  const [updates, setUpdates] = useState<HomeUpdate[]>(HOME_UPDATES);
+  const [featured, setFeatured] = useState<any>(null);
+  const [updates, setUpdates] = useState<any[]>([]);
   const [profileProjects, setProfileProjects] = useState([]);
   const [fetchError, setFetchError] = useState("");
   const [showAllUpdates, setShowAllUpdates] = useState(false);
@@ -562,6 +555,7 @@ export default function HomePage() {
   const recommendedCardRefs = useRef<Array<HTMLElement | null>>([]);
 
   const recommendedProjects = useMemo(() => {
+    if (!featured) return [];
     const featuredProject = {
       id: featured.id,
       title: featured.title,
@@ -573,7 +567,6 @@ export default function HomePage() {
       hostInitial: featured.hostInitial,
       hostName: featured.hostName,
     };
-
     const updateProjects = updates
       .filter((item) => item.id !== featured.id)
       .slice(0, 2)
@@ -588,7 +581,6 @@ export default function HomePage() {
         hostInitial: item.avatarInitial,
         hostName: toDisplayName(item.author),
       }));
-
     return [featuredProject, ...updateProjects];
   }, [featured, updates]);
 
@@ -609,8 +601,8 @@ export default function HomePage() {
         if (!isMounted) return;
         const nextCategories = data.categories?.length ? data.categories : HOME_CATEGORIES;
         setCategories(nextCategories);
-        setFeatured({ ...HOME_FEATURED, ...(data.featured ?? {}) });
-        setUpdates(Array.isArray(data.updates) ? data.updates : HOME_UPDATES);
+        setFeatured(data.featured ?? null);
+        setUpdates(Array.isArray(data.updates) ? data.updates : []);
         setActiveCategory((prev) => nextCategories.includes(prev) ? prev : (nextCategories[0] ?? HOME_CATEGORIES[0] ?? "すべて"));
         setFetchError("");
       } catch {
@@ -726,10 +718,10 @@ export default function HomePage() {
       <header style={S.header}>
         <div
           style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
-          onClick={() => router.push(`/profile/${PROFILE_SUMMARY.handle}`)}
+          onClick={() => router.push("/profile/me")}
         >
-          <div style={S.avatarLg}>{PROFILE_SUMMARY.avatarInitial}</div>
-          <span style={{ fontSize: "1rem", fontWeight: 700, color: "#ffffff" }}>{PROFILE_SUMMARY.name}</span>
+          <div style={S.avatarLg}>Me</div>
+          <span style={{ fontSize: "1rem", fontWeight: 700, color: "#ffffff" }}>マイページ</span>
         </div>
       </header>
 
@@ -989,7 +981,7 @@ export default function HomePage() {
           </svg>
           <span>チャット</span>
         </button>
-        <button style={S.navItem} onClick={() => router.push(`/profile/${PROFILE_SUMMARY.handle}`)}> 
+        <button style={S.navItem} onClick={() => router.push("/profile/me")}> 
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
