@@ -4,9 +4,6 @@ from uuid6 import uuid7
 
 
 class Chatroom(models.Model):
-    # Prefetch to_attr 名。views と serializers で共有して文字列の分散を防ぐ。
-    MESSAGES_PREFETCH_ATTR = "messages_cache"
-
     class RoomType(models.TextChoices):
         PROJECT_CHAT = "PROJECT_CHAT", "プロジェクトチャット"
         PERSONAL_CHAT = "PERSONAL_CHAT", "個人チャット"

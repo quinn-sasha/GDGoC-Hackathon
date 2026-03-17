@@ -38,6 +38,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
 
     def _get_members_info(self, obj):
         """prefetchキャッシュを1回走査して自分・相手のメンバー情報を返す。
+        PERSONAL_CHAT 専用。PROJECT_CHAT では other_member が不定になる点に注意。
         Returns (my_membership, other_member) タプル。
         """
         request = self.context.get("request")
@@ -66,36 +67,16 @@ class ConversationListSerializer(serializers.ModelSerializer):
         }
 
     def get_last_message(self, obj):
-        # list() では messages_cache（Prefetch to_attr）を使うため N+1 が発生しない。
-        # create() など非プリフェッチ時はフォールバッククエリを使用。
-        msgs = getattr(obj, Chatroom.MESSAGES_PREFETCH_ATTR, None)
-        if msgs is not None:
-            if not msgs:
-                return None
-            last = msgs[-1]  # order_by("created_at") なので末尾が最新
-        else:
-            last = obj.messages.select_related("sender").order_by("-created_at").first()
-            if last is None:
-                return None
+        # _annotate_conversations() で付加されたアノテーションを使用（N+1 なし）
+        if getattr(obj, "last_message_id", None) is None:
+            return None
         return {
-            "id": last.id,
-            "sender_username": last.sender.username,
-            "content": last.content,
-            "created_at": last.created_at,
+            "id": obj.last_message_id,
+            "sender_username": obj.last_message_sender_username,
+            "content": obj.last_message_content,
+            "created_at": obj.last_message_created_at,
         }
 
     def get_unread_count(self, obj):
-        membership, _ = self._get_members_info(obj)
-        if membership is None:
-            return 0
-        # list() では messages_cache を使って Python 側で計算（N+1 回避）。
-        # uuid7 は時刻順にソート可能なため id 比較が正確。
-        msgs = getattr(obj, Chatroom.MESSAGES_PREFETCH_ATTR, None)
-        if msgs is not None:
-            if membership.last_read_message is None:
-                return len(msgs)
-            return sum(1 for m in msgs if m.id > membership.last_read_message.id)
-        # create() など非プリフェッチ時のフォールバック（単一オブジェクトなので許容）
-        if membership.last_read_message is None:
-            return obj.messages.count()
-        return obj.messages.filter(id__gt=membership.last_read_message.id).count()
+        # _annotate_conversations() で付加されたアノテーションを使用（N+1 なし）
+        return getattr(obj, "unread_count", 0)

@@ -1,6 +1,17 @@
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
-from django.db.models import Prefetch
+from django.db.models import (
+    Case,
+    CharField,
+    Count,
+    DateTimeField,
+    IntegerField,
+    OuterRef,
+    Subquery,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
@@ -12,12 +23,72 @@ from .models import Chatroom, ChatroomUser, Message, PersonalChatroom
 from .serializers import ConversationListSerializer, MessageSerializer
 
 
-def _messages_prefetch() -> Prefetch:
-    """会話一覧用の messages Prefetch を返す。to_attr は Chatroom.MESSAGES_PREFETCH_ATTR で一元管理。"""
-    return Prefetch(
-        "messages",
-        queryset=Message.objects.select_related("sender").order_by("created_at"),
-        to_attr=Chatroom.MESSAGES_PREFETCH_ATTR,
+def _annotate_conversations(queryset, user):
+    """会話一覧・単体取得用のクエリセットに last_message / unread_count を DB 集計で付加する。
+
+    全メッセージをメモリにロードせず、Subquery / annotate でDB側で集計する。
+    """
+    # 最新メッセージ取得用のベースクエリ（4フィールド分のサブクエリで共有）
+    latest_msg = Message.objects.filter(chatroom=OuterRef("pk")).order_by("-created_at")
+
+    # 全メッセージ数（last_read_message が NULL のとき unread_count として使用）
+    total_msg_count = Subquery(
+        Message.objects.filter(chatroom=OuterRef("pk"))
+        .order_by()
+        .values("chatroom")
+        .annotate(n=Count("pk"))
+        .values("n")[:1],
+        output_field=IntegerField(),
+    )
+
+    # last_read より後のメッセージ数（last_read が NULL のとき id__gt=NULL で 0 になるため Case で分岐）
+    after_last_read_count = Subquery(
+        Message.objects.filter(
+            chatroom=OuterRef("pk"),
+            id__gt=Subquery(
+                ChatroomUser.objects.filter(
+                    chatroom=OuterRef(OuterRef("pk")), user=user
+                ).values("last_read_message_id")[:1]
+            ),
+        )
+        .order_by()
+        .values("chatroom")
+        .annotate(n=Count("pk"))
+        .values("n")[:1],
+        output_field=IntegerField(),
+    )
+
+    return (
+        queryset
+        # Step 1: ユーザーの last_read_message_id を取得（NULL チェック用）
+        .annotate(
+            _my_last_read_id=Subquery(
+                ChatroomUser.objects.filter(
+                    chatroom=OuterRef("pk"), user=user
+                ).values("last_read_message_id")[:1]
+            )
+        )
+        # Step 2: last_message フィールドと unread_count をアノテート
+        .annotate(
+            last_message_id=Subquery(latest_msg.values("id")[:1]),
+            last_message_content=Subquery(
+                latest_msg.values("content")[:1], output_field=CharField()
+            ),
+            last_message_created_at=Subquery(
+                latest_msg.values("created_at")[:1], output_field=DateTimeField()
+            ),
+            last_message_sender_username=Subquery(
+                latest_msg.values("sender__username")[:1], output_field=CharField()
+            ),
+            unread_count=Case(
+                When(
+                    _my_last_read_id__isnull=True,
+                    then=Coalesce(total_msg_count, Value(0)),
+                ),
+                default=Coalesce(after_last_read_count, Value(0)),
+                output_field=IntegerField(),
+            ),
+        )
     )
 
 
@@ -41,17 +112,12 @@ class ConversationViewSet(viewsets.ViewSet):
         responses={200: ConversationListSerializer(many=True)},
     )
     def list(self, request):
-        # messages_cache に全メッセージをprefetch。
-        # get_last_message / get_unread_count はこのキャッシュを使うため N+1 が発生しない。
-        chatrooms = (
+        chatrooms = _annotate_conversations(
             Chatroom.objects.filter(members__user=request.user)
             .select_related("project")
-            .prefetch_related(
-                "members__user",
-                "members__last_read_message",
-                _messages_prefetch(),
-            )
-            .order_by("-updated_at")
+            .prefetch_related("members__user")
+            .order_by("-updated_at"),
+            request.user,
         )
         paginator = ConversationPageNumberPagination()
         page = paginator.paginate_queryset(chatrooms, request)
@@ -103,13 +169,14 @@ class ConversationViewSet(viewsets.ViewSet):
             personal = PersonalChatroom.objects.select_related("chatroom").get(
                 user1_id=u1_id, user2_id=u2_id
             )
-            chatroom_with_prefetch = (
-                Chatroom.objects.filter(id=personal.chatroom_id)
-                .prefetch_related("members__user", "members__last_read_message", _messages_prefetch())
-                .first()
-            )
+            chatroom_obj = _annotate_conversations(
+                Chatroom.objects.filter(id=personal.chatroom_id).prefetch_related(
+                    "members__user"
+                ),
+                request.user,
+            ).first()
             serializer = ConversationListSerializer(
-                chatroom_with_prefetch, context={"request": request}
+                chatroom_obj, context={"request": request}
             )
             return Response(serializer.data, status=status.HTTP_200_OK)
         except PersonalChatroom.DoesNotExist:
@@ -134,23 +201,23 @@ class ConversationViewSet(viewsets.ViewSet):
                 )
             except PersonalChatroom.DoesNotExist:
                 raise
-            chatroom_with_prefetch = (
-                Chatroom.objects.filter(id=personal.chatroom_id)
-                .prefetch_related("members__user", "members__last_read_message", _messages_prefetch())
-                .first()
-            )
+            chatroom_obj = _annotate_conversations(
+                Chatroom.objects.filter(id=personal.chatroom_id).prefetch_related(
+                    "members__user"
+                ),
+                request.user,
+            ).first()
             serializer = ConversationListSerializer(
-                chatroom_with_prefetch, context={"request": request}
+                chatroom_obj, context={"request": request}
             )
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        chatroom_with_prefetch = (
-            Chatroom.objects.filter(id=chatroom.id)
-            .prefetch_related("members__user", "members__last_read_message", _messages_prefetch())
-            .first()
-        )
+        chatroom_obj = _annotate_conversations(
+            Chatroom.objects.filter(id=chatroom.id).prefetch_related("members__user"),
+            request.user,
+        ).first()
         serializer = ConversationListSerializer(
-            chatroom_with_prefetch, context={"request": request}
+            chatroom_obj, context={"request": request}
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
