@@ -1,22 +1,38 @@
 "use client";
 
-import { useMemo, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAllChatThreads } from "@/lib/chat-storage";
+import { fetchChatThreads } from "@/lib/chat-client";
+
 
 const FILTERS = ["すべて", "未読", "オンライン"] as const;
-
 type ChatFilter = (typeof FILTERS)[number];
+
 
 export default function ChatPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<ChatFilter>("すべて");
-  const allThreads = useMemo(() => getAllChatThreads(), []);
+  const [threads, setThreads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchChatThreads()
+      .then((data) => {
+        setThreads(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("チャット一覧の取得に失敗しました");
+        setLoading(false);
+      });
+  }, []);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredThreads = useMemo(() => {
-    return allThreads.filter((thread) => {
+    return threads.filter((thread) => {
       const matchesQuery =
         normalizedQuery === "" ||
         thread.title.toLowerCase().includes(normalizedQuery) ||
@@ -35,7 +51,125 @@ export default function ChatPage() {
       if (!left.pinned && right.pinned) return 1;
       return right.unreadCount - left.unreadCount;
     });
-  }, [activeFilter, allThreads, normalizedQuery]);
+  }, [activeFilter, threads, normalizedQuery]);
+
+  // スケルトンUI
+  const SkeletonList = (
+    <section style={{ marginTop: 24 }}>
+      {[...Array(5)].map((_, i) => (
+        <div key={i} style={{ display: "flex", gap: 14, padding: "14px 20px", alignItems: "center" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#222", opacity: 0.3 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ width: "60%", height: 18, background: "#222", borderRadius: 6, marginBottom: 8, opacity: 0.3 }} />
+            <div style={{ width: "40%", height: 14, background: "#222", borderRadius: 6, marginBottom: 6, opacity: 0.2 }} />
+            <div style={{ width: "80%", height: 12, background: "#222", borderRadius: 6, opacity: 0.15 }} />
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+
+  if (loading || error) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          maxWidth: 480,
+          margin: "0 auto",
+          background: "#111111",
+          color: "#ffffff",
+          padding: "24px 0 106px",
+          fontFamily: "'Segoe UI', sans-serif",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <header style={{ display: "flex", alignItems: "center", marginBottom: 10, padding: "16px 20px 8px" }}>
+          <h1 style={{ margin: 0, fontSize: "1.75rem", letterSpacing: "0.01em", fontWeight: 800 }}>メッセージ</h1>
+        </header>
+        {SkeletonList}
+        {/* 下部ナビバー */}
+        <nav
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "100%",
+            maxWidth: 480,
+            display: "flex",
+            justifyContent: "space-around",
+            alignItems: "center",
+            background: "#1a1a1a",
+            borderTop: "1px solid #2a2a2a",
+            padding: "10px 0 14px",
+            zIndex: 100,
+          }}
+        >
+          <button
+            style={{
+              background: "none",
+              border: "none",
+              color: "#666666",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              fontSize: "0.72rem",
+              padding: "0 20px",
+            }}
+            onClick={() => router.push("/home")}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
+            </svg>
+            <span>ホーム</span>
+          </button>
+          <button
+            style={{
+              background: "none",
+              border: "none",
+              color: "#ffffff",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              fontSize: "0.72rem",
+              padding: "0 20px",
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>チャット</span>
+          </button>
+          <button
+            style={{
+              background: "none",
+              border: "none",
+              color: "#666666",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              fontSize: "0.72rem",
+              padding: "0 20px",
+            }}
+            onClick={() => router.push("/profile/me")}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span>プロフィール</span>
+          </button>
+        </nav>
+      </main>
+    );
+  }
 
   return (
     <main
@@ -307,6 +441,8 @@ export default function ChatPage() {
 
       {/* 新規チャット作成ボタン削除済み */}
 
+      {/* 下部ナビバー */}
+      {/* Bottom nav: ホームと同じデザイン */}
       <nav
         style={{
           position: "fixed",
@@ -376,7 +512,7 @@ export default function ChatPage() {
             fontSize: "0.72rem",
             padding: "0 20px",
           }}
-          onClick={() => router.push("/profile")}
+          onClick={() => router.push("/profile/me")}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
