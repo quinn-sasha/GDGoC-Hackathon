@@ -77,6 +77,7 @@ class ConversationAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["content"], "こんにちは")
         self.assertEqual(response.data["sender"]["username"], self.user1.username)
+        self.assertEqual(response.data["sender"]["id"], self.user1.id)  # 整数型であることを確認
 
     def test_get_messages(self):
         chatroom = Chatroom.objects.create(room_type=Chatroom.RoomType.PERSONAL_CHAT)
@@ -88,13 +89,26 @@ class ConversationAPITest(APITestCase):
         url = self._detail_url(chatroom.id, "messages")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data["results"]), 2)
 
     def test_mark_read(self):
         chatroom = Chatroom.objects.create(room_type=Chatroom.RoomType.PERSONAL_CHAT)
         ChatroomUser.objects.create(chatroom=chatroom, user=self.user1)
         ChatroomUser.objects.create(chatroom=chatroom, user=self.user2)
         Message.objects.create(chatroom=chatroom, sender=self.user2, content="unread")
+
+        url = self._detail_url(chatroom.id, "mark-read")
+        response = self.client.patch(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        list_response = self.client.get(self.list_url)
+        self.assertEqual(list_response.data[0]["unread_count"], 0)
+
+    def test_mark_read_no_messages(self):
+        """メッセージが0件の状態で既読マークしても正常終了すること"""
+        chatroom = Chatroom.objects.create(room_type=Chatroom.RoomType.PERSONAL_CHAT)
+        ChatroomUser.objects.create(chatroom=chatroom, user=self.user1)
+        ChatroomUser.objects.create(chatroom=chatroom, user=self.user2)
 
         url = self._detail_url(chatroom.id, "mark-read")
         response = self.client.patch(url)
@@ -117,3 +131,19 @@ class ConversationAPITest(APITestCase):
         url = self._detail_url(chatroom.id, "messages")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_non_member_cannot_post_message(self):
+        """非メンバーはメッセージの送信もできないこと"""
+        chatroom = Chatroom.objects.create(room_type=Chatroom.RoomType.PERSONAL_CHAT)
+        user3 = create_active_user("user3@example.com", "user3")
+        ChatroomUser.objects.create(chatroom=chatroom, user=user3)
+        ChatroomUser.objects.create(chatroom=chatroom, user=self.user2)
+
+        url = self._detail_url(chatroom.id, "messages")
+        response = self.client.post(url, {"content": "不正アクセス"})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_conversation_nonexistent_user(self):
+        """存在しないuser_idを指定すると400が返ること"""
+        response = self.client.post(self.list_url, {"user_id": "99999999"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

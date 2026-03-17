@@ -24,6 +24,8 @@ class Chatroom(models.Model):
         verbose_name="プロジェクト",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
+    # メッセージ送信時のみ更新する（views で queryset.update() を使うこと）。
+    # chatroom.save() では自動更新されないので注意。
     updated_at = models.DateTimeField(default=timezone.now, verbose_name="更新日時")
 
     class Meta:

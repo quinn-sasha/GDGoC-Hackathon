@@ -4,7 +4,7 @@ from .models import Chatroom, Message
 
 
 class SenderSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
+    id = serializers.IntegerField()
     username = serializers.CharField()
     icon_image_path = serializers.CharField()
 
@@ -22,7 +22,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
     other_user = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
-    project_id = serializers.UUIDField(read_only=True, allow_null=True)
+    project_id = serializers.UUIDField(read_only=True)
 
     class Meta:
         model = Chatroom
@@ -60,10 +60,9 @@ class ConversationListSerializer(serializers.ModelSerializer):
         return None
 
     def get_last_message(self, obj):
-        messages = list(obj.messages.all())
-        if not messages:
+        last = obj.messages.select_related("sender").order_by("-created_at").first()
+        if last is None:
             return None
-        last = messages[-1]
         return {
             "id": last.id,
             "sender_username": last.sender.username,
@@ -77,6 +76,8 @@ class ConversationListSerializer(serializers.ModelSerializer):
             return 0
         if membership.last_read_message is None:
             return obj.messages.count()
+        # uuid7 は時刻順にソート可能なため、id__gt で既読より新しいメッセージを正確にカウントできる。
+        # created_at__gt だとミリ秒以下の精度で同時刻メッセージを取りこぼす可能性があるため使わない。
         return obj.messages.filter(
-            created_at__gt=membership.last_read_message.created_at
+            id__gt=membership.last_read_message.id
         ).count()
