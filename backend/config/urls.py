@@ -6,6 +6,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # 認証エンドポイント
     path("api/auth/", include("accounts.urls")),
+    path("api/projects/", include("project.urls")),
     # API ドキュメント
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(

@@ -1,6 +1,5 @@
-from importlib import reload
-
 import uuid6
+from django.core.validators import RegexValidator
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -15,9 +14,14 @@ def generate_uuid7():
 # ==========================================
 
 
-class TechSkills(models.Model):
+class TechSkill(models.Model):
+    name_validator = RegexValidator(
+        regex=r"^[a-z0-9\s\.+#-]+$",
+        message="スキル名には小文字の英数字と記号（. + # -）、スペースのみ使用できます。",
+    )
+
     id = models.BigAutoField(primary_key=True)
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50, unique=True, validators=[name_validator])
 
     def save(self, *args, **kwargs):
         if self.name:
@@ -28,7 +32,7 @@ class TechSkills(models.Model):
         return self.name
 
 
-class TechCategories(models.Model):
+class TechCategory(models.Model):
     id = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
@@ -37,7 +41,7 @@ class TechCategories(models.Model):
         return self.name
 
 
-class VibeTags(models.Model):
+class VibeTag(models.Model):
     id = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=20, unique=True)
 
@@ -50,7 +54,7 @@ class VibeTags(models.Model):
 # ==========================================
 
 
-class Projects(models.Model):
+class Project(models.Model):
     class ProgressStatus(models.TextChoices):
         OPENING = "opening", _("開始前")
         ONGOING = "ongoing", _("進行中")
@@ -73,19 +77,19 @@ class Projects(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     # many to many fields
     technologies = models.ManyToManyField(
-        TechSkills,
-        through="ProjectsTechnologies",
+        TechSkill,
+        through="ProjectTechnology",
         related_name="projects",
         help_text="プロジェクトを通して学びたい技術",
     )
     categories = models.ManyToManyField(
-        TechCategories, through="ProjectsCategories", related_name="projects"
+        TechCategory, through="ProjectCategory", related_name="projects"
     )
     vibe_tags = models.ManyToManyField(
-        VibeTags, through="ProjectsVibes", related_name="projects"
+        VibeTag, through="ProjectVibe", related_name="projects"
     )
     saved_by_users = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, through="SavedProjects", related_name="saved_projects"
+        settings.AUTH_USER_MODEL, through="SavedProject", related_name="saved_projects"
     )
 
     def __str__(self):
@@ -98,36 +102,36 @@ class Projects(models.Model):
 
 
 # Don't need related name in join tables
-class ProjectsTechnologies(models.Model):
+class ProjectTechnology(models.Model):
     id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
-    project = models.ForeignKey(Projects, on_delete=models.CASCADE)
-    technology = models.ForeignKey(TechSkills, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    technology = models.ForeignKey(TechSkill, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ("project", "technology")
 
 
-class ProjectsCategories(models.Model):
+class ProjectCategory(models.Model):
     id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
-    project = models.ForeignKey(Projects, on_delete=models.CASCADE)
-    category = models.ForeignKey(TechCategories, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    category = models.ForeignKey(TechCategory, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ("project", "category")
 
 
-class ProjectsVibes(models.Model):
+class ProjectVibe(models.Model):
     id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
-    project = models.ForeignKey(Projects, on_delete=models.CASCADE)
-    vibe_tag = models.ForeignKey(VibeTags, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    vibe_tag = models.ForeignKey(VibeTag, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ("project", "vibe_tag")
 
 
-class SavedProjects(models.Model):
+class SavedProject(models.Model):
     id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
-    project = models.ForeignKey(Projects, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
