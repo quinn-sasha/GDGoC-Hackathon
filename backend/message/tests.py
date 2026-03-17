@@ -1,4 +1,6 @@
-from django.db import IntegrityError
+import unittest
+
+from django.db import IntegrityError, connection
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -174,13 +176,15 @@ class ConversationAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNotNone(response.data["last_message"])
         self.assertEqual(response.data["last_message"]["content"], "hello")
-        # user1 はメッセージを送ったが mark_read を呼んでいないため unread_count > 0
-        self.assertGreater(response.data["unread_count"], 0)
+        # 送信者（user1）は送信時に自動既読されるため unread_count = 0
+        self.assertEqual(response.data["unread_count"], 0)
 
+    @unittest.skipIf(
+        connection.vendor == "sqlite",
+        "SQLite は CHECK 制約を無視するため PostgreSQL 環境でのみ実行",
+    )
     def test_personalchatroom_checkconstraint(self):
-        """PersonalChatroom の CheckConstraint (user1_id < user2_id) が機能することを確認。
-        NOTE: SQLite は CHECK 制約を無視するため PostgreSQL 環境でのみ有効。
-        """
+        """PersonalChatroom の CheckConstraint (user1_id < user2_id) が機能することを確認。"""
         chatroom = Chatroom.objects.create(room_type=Chatroom.RoomType.PERSONAL_CHAT)
         with self.assertRaises(IntegrityError):
             # user2.id > user1.id のため逆順指定は制約違反になる

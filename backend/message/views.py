@@ -33,8 +33,10 @@ def _annotate_conversations(queryset, user):
     全メッセージをメモリにロードせず、Subquery / annotate でDB側で集計する。
 
     NOTE: last_message の各フィールド（id / content / created_at / sender_username）は
-    それぞれ独立したサブクエリとして発行される（計4本）。PostgreSQL が内部でキャッシュする
-    ケースが多く現状は許容範囲と判断している。最適化が必要な場合は JSONObject での集約を検討すること。
+    それぞれ独立したサブクエリとして発行される（4本）。加えて unread_count 算出に
+    total_msg_count・after_last_read_count・_my_last_read_id の3本が走り、合計最大7本となる。
+    PostgreSQL が内部でキャッシュするケースが多く現状は許容範囲と判断している。
+    最適化が必要な場合は JSONObject での集約を検討すること。
     """
     # 最新メッセージ取得用のベースクエリ（4フィールド分のサブクエリで共有）
     latest_msg = Message.objects.filter(chatroom=OuterRef("pk")).order_by("-created_at")
@@ -118,17 +120,6 @@ class MessageCursorPagination(CursorPagination):
 class ConversationViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
-    def _chatroom_response(self, chatroom_id, request, http_status):
-        """単一チャットルームを annotate してシリアライズし Response を返すヘルパー。"""
-        obj = _annotate_conversations(
-            Chatroom.objects.filter(id=chatroom_id).prefetch_related("members__user"),
-            request.user,
-        ).first()
-        return Response(
-            ConversationListSerializer(obj, context={"request": request}).data,
-            status=http_status,
-        )
-
     @extend_schema(
         tags=["メッセージ"],
         summary="会話一覧取得",
@@ -148,6 +139,22 @@ class ConversationViewSet(viewsets.ViewSet):
             page, many=True, context={"request": request}
         )
         return paginator.get_paginated_response(serializer.data)
+
+    def _chatroom_response(self, chatroom_id, request, http_status):
+        """単一チャットルームを annotate してシリアライズし Response を返すヘルパー。"""
+        obj = _annotate_conversations(
+            Chatroom.objects.filter(id=chatroom_id).prefetch_related("members__user"),
+            request.user,
+        ).first()
+        if obj is None:
+            return Response(
+                {"detail": "チャットルームが見つかりません。"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(
+            ConversationListSerializer(obj, context={"request": request}).data,
+            status=http_status,
+        )
 
     @extend_schema(
         tags=["メッセージ"],
@@ -302,6 +309,10 @@ class ConversationViewSet(viewsets.ViewSet):
             chatroom=chatroom,
             sender=request.user,
             content=content,
+        )
+        # 送信者は自分のメッセージを既読扱いにする（unread_count を 0 に保つ）
+        ChatroomUser.objects.filter(chatroom=chatroom, user=request.user).update(
+            last_read_message_id=message.id
         )
         chatroom.save(update_fields=["updated_at"])
 
