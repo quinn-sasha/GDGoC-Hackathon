@@ -8,12 +8,6 @@ from django.core.exceptions import ValidationError
 
 
 class TechSkillSerializer(serializers.ModelSerializer):
-    # models.py でも同じ処理を書いているが、安全性を高めるために両方で正規化する
-    def save(self, *args, **kwargs):
-        if self.name:
-            self.name = self.name.strip().lower()
-        super().save(*args, **kwargs)
-
     class Meta:
         model = TechSkill
         fields = ["id", "name"]
@@ -32,6 +26,77 @@ class VibeTagsSerializer(serializers.ModelSerializer):
         model = VibeTag
         fields = ["id", "name"]
         read_only_fields = ["id", "name"]
+
+
+class ProjectListSerializer(serializers.ModelSerializer):
+    owner_name = serializers.ReadOnlyField(source="owner.username")
+    owner_icon = serializers.ReadOnlyField(source="owner.icon_image_path")
+    technologies = serializers.SlugRelatedField(
+        many=True, read_only=True, slug_field="name"
+    )
+    categories = serializers.SlugRelatedField(
+        many=True, read_only=True, slug_field="name"
+    )
+
+    class Meta:
+        model = Project
+        fields = [
+            "id",
+            "owner_name",
+            "owner_icon",
+            "progress_status",
+            "title",
+            "project_image_path",
+            "created_at",
+            "updated_at",
+            "technologies",
+            "categories",
+        ]
+        read_only_fields = fields
+
+
+class ProjectDetailSerializer(serializers.ModelSerializer):
+    owner_name = serializers.ReadOnlyField(source="owner.username")
+    owner_icon = serializers.ReadOnlyField(source="owner.icon_image_path")
+    technologies = TechSkillSerializer(many=True, read_only=True)
+    categories = TechCategoriesSerializer(many=True, read_only=True)
+    vibe_tags = VibeTagsSerializer(many=True, read_only=True)
+    # custom fields
+    num_saved = serializers.SerializerMethodField()
+    is_saved = serializers.SerializerMethodField()
+
+    def get_num_saved(self, obj):
+        return obj.saved_by_users.count()
+
+    def get_is_saved(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return False
+        if not request.user.is_authenticated:
+            return False
+        return obj.saved_by_users.filter(id=request.user.id).exists()
+
+    class Meta:
+        model = Project
+        fields = [
+            "id",
+            "owner",
+            "owner_name",
+            "owner_icon",
+            "progress_status",
+            "title",
+            "description",
+            "project_image_path",
+            "created_at",
+            "updated_at",
+            "technologies",
+            "categories",
+            "vibe_tags",
+            "saved_by_users",
+            "num_saved",
+            "is_saved",
+        ]
+        read_only_fields = fields
 
 
 class ProjectWriteSerializer(serializers.ModelSerializer):
@@ -114,6 +179,13 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
             instance.vibe_tags.set(vibe_tags)
         return instance
 
+    def to_representation(self, instance):
+        """
+        レスポンスデータを作成する際（データ出力時）は、
+        詳細表示用の ProjectDetailSerializer に処理を委譲する
+        """
+        return ProjectDetailSerializer(instance, context=self.context).data
+
     class Meta:
         model = Project
         fields = [
@@ -125,74 +197,3 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
             "categories",
             "vibe_tags",
         ]
-
-
-class ProjectListSerializer(serializers.ModelSerializer):
-    owner_name = serializers.ReadOnlyField(source="owner.username")
-    owner_icon = serializers.ReadOnlyField(source="owner.icon_image_path")
-    technologies = serializers.SlugRelatedField(
-        many=True, read_only=True, slug_field="name"
-    )
-    categories = serializers.SlugRelatedField(
-        many=True, read_only=True, slug_field="name"
-    )
-
-    class Meta:
-        model = Project
-        fields = [
-            "id",
-            "owner_name",
-            "owner_icon",
-            "progress_status",
-            "title",
-            "project_image_path",
-            "created_at",
-            "updated_at",
-            "technologies",
-            "categories",
-        ]
-        read_only_fields = fields
-
-
-class ProjectDetailSerializer(serializers.ModelSerializer):
-    owner_name = serializers.ReadOnlyField(source="owner.username")
-    owner_icon = serializers.ReadOnlyField(source="owner.icon_image_path")
-    technologies = TechSkillSerializer(many=True, read_only=True)
-    categories = TechCategoriesSerializer(many=True, read_only=True)
-    vibe_tags = VibeTagsSerializer(many=True, read_only=True)
-    # custom fields
-    num_saved = serializers.SerializerMethodField()
-    is_saved = serializers.SerializerMethodField()
-
-    def get_num_saved(self, obj):
-        return obj.saved_by_users.count()
-
-    def get_is_saved(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return False
-        if not request.user.is_authenticated:
-            return False
-        return obj.saved_by_users.filter(id=request.user.id).exists()
-
-    class Meta:
-        model = Project
-        fields = [
-            "id",
-            "owner",
-            "owner_name",
-            "owner_icon",
-            "progress_status",
-            "title",
-            "description",
-            "project_image_path",
-            "created_at",
-            "updated_at",
-            "technologies",
-            "categories",
-            "vibe_tags",
-            "saved_by_users",
-            "num_saved",
-            "is_saved",
-        ]
-        read_only_fields = fields
