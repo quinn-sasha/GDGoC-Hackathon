@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { isMobileUA } from "@/lib/device";
 import { useRouter } from "next/navigation";
 import { PROFILE_SUMMARY, PROFILE_SKILLS } from "@/lib/mock-data";
 import { updateProfile } from "@/lib/profile-api";
 
-export default function ProfileEditPage() {
   const router = useRouter();
 
   const [name, setName] = useState(PROFILE_SUMMARY.name);
@@ -17,6 +17,14 @@ export default function ProfileEditPage() {
   const [showPicker, setShowPicker] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  // SSR安全なデバイス判定
+  const [isPC, setIsPC] = useState(false);
+  useEffect(() => {
+    setIsPC(window.innerWidth >= 900 && !isMobileUA());
+    const handleResize = () => setIsPC(window.innerWidth >= 900 && !isMobileUA());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const isValidLink = (value: string) => value.trim() === "" || /^https?:\/\/\S+$/i.test(value.trim());
   const hasInvalidLink = !isValidLink(githubUrl) || !isValidLink(portfolioUrl);
@@ -69,8 +77,8 @@ export default function ProfileEditPage() {
     <main
       style={{
         minHeight: "100vh",
-        maxWidth: 480,
-        margin: "0 auto",
+        maxWidth: isPC ? "100vw" : 480,
+        margin: isPC ? "0" : "0 auto",
         background: "#111111",
         color: "#ffffff",
         fontFamily: "'Segoe UI', sans-serif",

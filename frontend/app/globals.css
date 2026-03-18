@@ -608,3 +608,23 @@ body {
 .hm-nav-item--active {
   color: #3b82f6;
 }
+
+/* === PC・スマホ両対応の最大幅・中央寄せ・余白 === */
+
+.app-root, main {
+  width: 100vw;
+  min-height: 100vh;
+  background: #111;
+  color: #fff;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  margin: 0 auto;
+  max-width: 480px;
+  padding: 0 8px;
+}
+
+@media (min-width: 900px) {
+  .app-root, main {
+    max-width: 900px;
+    padding: 0 40px;
+  }
+}

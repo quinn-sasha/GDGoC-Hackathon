@@ -1,4 +1,6 @@
+
 "use client";
+import { isMobileUA } from "@/lib/device";
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -67,18 +69,26 @@ function toDisplayName(author: string) {
     .join(" ");
 }
 
+const getResponsiveRootStyle = () => {
+  return (isPC: boolean) => {
+    const style: any = {
+      display: "flex",
+      flexDirection: "column" as const,
+      minHeight: "100vh",
+      maxWidth: isPC ? "100vw" : 480,
+      margin: isPC ? "0" : "0 auto",
+      background: "#111111",
+      color: "#ffffff",
+      fontFamily: "'Segoe UI', sans-serif",
+      position: "relative" as const,
+    };
+    if (isPC) style.paddingLeft = 100;
+    return style;
+  };
+};
+
 const S = {
-  root: {
-    display: "flex",
-    flexDirection: "column" as const,
-    minHeight: "100vh",
-    maxWidth: 480,
-    margin: "0 auto",
-    background: "#111111",
-    color: "#ffffff",
-    fontFamily: "'Segoe UI', sans-serif",
-    position: "relative" as const,
-  },
+  root: {}, // ダミー。実際は下で動的に適用
   header: {
     display: "flex",
     alignItems: "center",
@@ -519,8 +529,8 @@ const S = {
   },
   createFab: {
     position: "fixed" as const,
-    right: "max(20px, calc(50vw - 220px))",
-    bottom: 84,
+    right: 20,
+    bottom: 20,
     width: 72,
     height: 72,
     border: "none",
@@ -538,6 +548,29 @@ const S = {
 };
 
 export default function HomePage() {
+  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setIsMobile(isMobileUA());
+    setMounted(true);
+    const handleResize = () => setIsMobile(isMobileUA());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  // SSR時はスマホ幅で固定
+  const [rootStyle, setRootStyle] = useState(getResponsiveRootStyle()(false));
+  useEffect(() => {
+    const isPC = window.innerWidth >= 900;
+    setRootStyle(getResponsiveRootStyle()(isPC));
+    const handleResize = () => setRootStyle(getResponsiveRootStyle()(window.innerWidth >= 900));
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  useEffect(() => {
+    const handleResize = () => setRootStyle(getResponsiveRootStyle());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   const [activeCategory, setActiveCategory] = useState(HOME_CATEGORIES[0] ?? "すべて");
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState<string[]>(HOME_CATEGORIES);
@@ -712,8 +745,75 @@ export default function HomePage() {
     }
   };
 
+  // ナビバー分岐（mounted後のみ描画）
+  let NavBar = null;
+  if (mounted) {
+    NavBar = isMobile ? (
+      <nav
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: 480,
+          background: "#1a1a1a",
+          borderTop: "1px solid #2a2a2a",
+          display: "flex",
+          justifyContent: "space-around",
+          padding: "10px 0 calc(10px + env(safe-area-inset-bottom))",
+          zIndex: 100,
+        }}
+      >
+        <button style={{ background: "none", border: "none", color: "#fff", font: "inherit", fontSize: "0.72rem", padding: "0 20px" }} onClick={() => router.push("/home")}>ホーム</button>
+        <button style={{ background: "none", border: "none", color: "#fff", font: "inherit", fontSize: "0.72rem", padding: "0 20px" }} onClick={() => router.push("/chat")}>チャット</button>
+        <button style={{ background: "none", border: "none", color: "#fff", font: "inherit", fontSize: "0.72rem", padding: "0 20px" }} onClick={() => router.push("/profile/me")}>プロフィール</button>
+      </nav>
+    ) : (
+      <nav
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          height: "100vh",
+          width: 100,
+          background: "#1a1a1a",
+          borderRight: "1px solid #2a2a2a",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-start",
+          alignItems: "center",
+          padding: "32px 0 0",
+          zIndex: 100,
+          gap: 8,
+        }}
+      >
+        <button style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 16, padding: "0 12px" }} onClick={() => router.push("/home") }>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
+          </svg>
+          <span style={{ fontSize: "0.82rem", color: "#fff", fontWeight: 700 }}>ホーム</span>
+        </button>
+        <button style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 16, padding: "0 12px" }} onClick={() => router.push("/chat") }>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <span style={{ fontSize: "0.82rem", color: "#fff", fontWeight: 700 }}>チャット</span>
+        </button>
+        <button style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 16, padding: "0 12px" }} onClick={() => router.push("/profile/me") }>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span style={{ fontSize: "0.82rem", color: "#fff", fontWeight: 700 }}>プロフィール</span>
+        </button>
+      </nav>
+    );
+  }
+
   return (
-    <div style={S.root}>
+    <div style={rootStyle}>
+      {mounted && NavBar}
       {/* Header */}
       <header style={S.header}>
         <div
@@ -967,28 +1067,31 @@ export default function HomePage() {
         ＋
       </button>
 
-      {/* Bottom nav */}
-      <nav style={S.nav}>
-        <button style={S.navItemActive}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
-          </svg>
-          <span>ホーム</span>
-        </button>
-        <button style={S.navItem} onClick={() => router.push("/chat")}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <span>チャット</span>
-        </button>
-        <button style={S.navItem} onClick={() => router.push("/profile/me")}> 
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          <span>プロフィール</span>
-        </button>
-      </nav>
+      {/* Bottom nav（isMobileのみ表示） */}
+      {/* hydrationエラー防止のためmounted後のみ描画 */}
+      {mounted && isMobile && (
+        <nav style={S.nav}>
+          <button style={S.navItemActive}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
+            </svg>
+            <span>ホーム</span>
+          </button>
+          <button style={S.navItem} onClick={() => router.push("/chat")}> 
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>チャット</span>
+          </button>
+          <button style={S.navItem} onClick={() => router.push("/profile/me")}> 
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span>プロフィール</span>
+          </button>
+        </nav>
+      )}
     </div>
   );
 }
