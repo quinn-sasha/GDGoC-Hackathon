@@ -153,18 +153,25 @@ export default function ProjectRecruitPage() {
 
   return (
     <>
-    {NavBarElement}
-    <main
-      style={{
-        minHeight: "100vh",
-        maxWidth: isPC ? 720 : 480,
-        margin: isPC ? "0" : "0 auto",
-        background: "#111111",
-        color: "#ffffff",
-        fontFamily: "'Segoe UI', sans-serif",
-        padding: isPC ? "18px 18px 26px 100px" : "18px 18px 26px",
-      }}
-    >
+      {NavBarElement}
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#111111",
+          color: "#ffffff",
+          paddingLeft: isPC ? 100 : 0,
+          display: "flex",
+          justifyContent: "flex-start",
+        }}
+      >
+        <main
+          style={{
+            width: isPC ? 720 : 480,
+            maxWidth: "calc(100% - 120px)",
+            margin: isPC ? "0 0 0 12px" : "0 auto",
+            padding: "18px 18px 26px",
+          }}
+        >
       <header style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
         <button
           type="button"
@@ -532,7 +539,8 @@ export default function ProjectRecruitPage() {
           </section>
         </div>
       ) : null}
-    </main>
+        </main>
+      </div>
     </>
   );
 }
