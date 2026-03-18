@@ -1,0 +1,118 @@
+# 変数の定義
+# メールアドレスは変更が必要です
+@host = http://localhost:8000
+@test_email = 88eragon@gmail.com
+@test_password = YourSecurePassword123!
+
+
+### 1. ユーザー登録
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+    "email": "{{test_email}}",
+    "username": "testuser2",
+    "password": "{{test_password}}"
+}
+
+### 2. メールアドレス確認（※ここはターミナルを見て手動でコピペ！）
+POST {{host}}/api/auth/verify-email
+Content-Type: application/json
+
+{
+    "token": "ここにターミナルのトークンを貼り付ける"
+}
+> {%
+    client.global.set("auth_token", response.body.access);
+%}
+
+### 3. ログイン
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "{{test_email}}",
+    "password": "{{test_password}}"
+}
+> {%
+    client.global.set("auth_token", response.body.access);
+    client.log("Login & Token saved: " + client.global.get("auth_token"));
+%}
+
+### 4. Create Project1 (IDを自動保存)
+POST {{host}}/api/projects/
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "title": "ハッカソン向けチームマッチングアプリ",
+    "description": "フロントエンドとバックエンドの連携をテストするためのプロジェクトです。",
+    "technologies": ["python", "django", "nuxt.js", "postgresql"],
+    "progress_status": "opening"
+}
+> {%
+    // 【追加】作られたProject1のUUIDを "project1_id" として自動保存
+    client.global.set("project1_id", response.body.id);
+    client.log("Project 1 Created: " + client.global.get("project1_id"));
+%}
+
+### 5. Create Project2
+POST {{host}}/api/projects/
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "title": "フルスクラッチHTTPサーバー開発",
+    "description": "Nginxにインスパイアされた、ノンブロッキングI/Oモデルのサーバー実装です。",
+    "technologies": ["c", "linux", "networking"],
+    "progress_status": "ongoing"
+}
+
+### 6. Get Projects List
+GET {{host}}/api/projects/
+
+### 7. Get a Project Detail (自動保存したIDを使用)
+GET {{host}}/api/projects/{{project1_id}}/
+Authorization: Bearer {{auth_token}}
+
+### 8. Save a Project (自動保存したIDを使用)
+# 2回連続で実行すると「保存解除」になります
+POST {{host}}/api/projects/{{project1_id}}/toggle_save/
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+### 9. プロジェクト詳細の取得（保存状態の確認）
+GET {{host}}/api/projects/{{project1_id}}/
+Authorization: Bearer {{auth_token}}
+
+### 10. プロジェクトの更新（テスト用プロジェクト作成とID保存）
+POST {{host}}/api/projects/
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "title": "更新テスト用プロジェクト",
+    "technologies": ["python", "django"]
+}
+> {%
+    client.global.set("test_project_id", response.body.id);
+    client.log("Test Project Created with ID: " + client.global.get("test_project_id"));
+%}
+
+### 11. 技術スタックを指定しないで更新
+PATCH {{host}}/api/projects/{{test_project_id}}/
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "title": "更新テスト（技術スタック省略）"
+}
+
+### 12. 技術スタックを「空リスト」で更新
+PATCH {{host}}/api/projects/{{test_project_id}}/
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "technologies": []
+}
