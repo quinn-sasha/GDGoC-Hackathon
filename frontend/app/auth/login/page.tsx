@@ -1,8 +1,14 @@
 
 "use client";
 import { isMobileUA } from "@/lib/device";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
 
-  // SSR時はスマホ幅で固定
+import { login } from "@/lib/auth-client";
+
+export default function LoginPage() {
+  const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     setIsMobile(isMobileUA());
@@ -11,14 +17,6 @@ import { isMobileUA } from "@/lib/device";
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
-
-import { login } from "@/lib/auth-client";
-
-export default function LoginPage() {
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 

@@ -1,17 +1,7 @@
 
 "use client";
 import { isMobileUA } from "@/lib/device";
-
-  // SSR時はスマホ幅で固定
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    setIsMobile(isMobileUA());
-    const handleResize = () => setIsMobile(isMobileUA());
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { verifyEmail } from "@/lib/auth-client";
@@ -19,6 +9,13 @@ import { verifyEmail } from "@/lib/auth-client";
 export default function VerifyEmailPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(isMobileUA());
+    const handleResize = () => setIsMobile(isMobileUA());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [defaultToken, setDefaultToken] = useState(() => {
