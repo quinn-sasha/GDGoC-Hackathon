@@ -137,3 +137,44 @@ class SavedProject(models.Model):
 
     class Meta:
         unique_together = ("project", "user")
+
+
+# ==========================================
+# 参加申請
+# ==========================================
+
+
+class Application(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "申請中"
+        ACCEPTED = "accepted", "承認済み"
+        REJECTED = "rejected", "却下"
+
+    id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name="ステータス",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="申請日時")
+    applicant = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="applications",
+        verbose_name="申請者",
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="applications",
+        verbose_name="プロジェクト",
+    )
+
+    class Meta:
+        verbose_name = "参加申請"
+        verbose_name_plural = "参加申請"
+        unique_together = [("project", "applicant")]
+
+    def __str__(self):
+        return f"{self.applicant.username} → {self.project.title}"
