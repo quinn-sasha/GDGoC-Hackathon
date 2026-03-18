@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchChatThreads } from "@/lib/chat-client";
+import { fetchConversations } from "@/lib/chat-client";
 
 
 const FILTERS = ["すべて", "未読", "オンライン"] as const;
@@ -19,7 +19,7 @@ export default function ChatPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchChatThreads()
+    fetchConversations()
       .then((data) => {
         setThreads(data);
         setLoading(false);

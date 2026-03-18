@@ -31,6 +31,7 @@ class ProjectListItemSerializer(serializers.ModelSerializer):
             "owner_icon",
             "progress_status",
             "title",
+            "description",
             "project_image_path",
             "created_at",
             "updated_at",

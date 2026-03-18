@@ -2,36 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getAllChatThreads, getStoredChatMessages, saveChatMessages, type StoredChatMessage } from "@/lib/chat-storage";
+import {
+  type ApiConversation,
+  type ApiMessage,
+  fetchConversationDetail,
+  fetchMessages,
+  sendMessage,
+  markConversationRead,
+} from "@/lib/chat-client";
 
-function getDefaultMessages(preview?: string, time?: string): StoredChatMessage[] {
-  return [
-    {
-      id: 1,
-      mine: false,
-      text: preview ?? "",
-      time: time ?? "今",
-    },
-    {
-      id: 2,
-      mine: true,
-      text: "了解です。詳細をこのスレッドで進めましょう。",
-      time: "今",
-    },
-  ];
+function formatMessageTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function ChatDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const threadId = Number(params.id);
+  const conversationId = params.id;
 
-  const thread = getAllChatThreads().find((item) => item.id === threadId);
-  const [messages, setMessages] = useState<StoredChatMessage[]>(() =>
-    getStoredChatMessages(threadId, getDefaultMessages(thread?.preview, thread?.time)),
-  );
+  const [conversation, setConversation] = useState<ApiConversation | null>(null);
+  const [messages, setMessages] = useState<ApiMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [draft, setDraft] = useState("");
-  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -39,44 +34,44 @@ export default function ChatDetailPage() {
   }, [messages.length]);
 
   useEffect(() => {
-    if (!thread) {
-      return;
+    let isMounted = true;
+    Promise.all([
+      fetchConversationDetail(conversationId),
+      fetchMessages(conversationId),
+    ])
+      .then(([conv, msgs]) => {
+        if (!isMounted) return;
+        setConversation(conv);
+        setMessages(msgs);
+        setLoading(false);
+        markConversationRead(conversationId).catch(() => {});
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setError("チャットの読み込みに失敗しました");
+        setLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [conversationId]);
+
+  const handleSend = async () => {
+    const text = draft.trim();
+    if (!text || isSending) return;
+    setIsSending(true);
+    try {
+      const newMsg = await sendMessage(conversationId, text);
+      setMessages((prev) => [...prev, newMsg]);
+      setDraft("");
+    } catch {
+      // 送信失敗時はドラフトを保持
+    } finally {
+      setIsSending(false);
     }
-
-    saveChatMessages(thread.id, messages);
-  }, [messages, thread]);
-
-  const handleSend = (value?: string) => {
-    const nextText = (value ?? draft).trim();
-    if (!nextText) return;
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        mine: true,
-        text: nextText,
-        time: "今",
-      },
-    ]);
-    setDraft("");
-    setIsPartnerTyping(true);
-
-    window.setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: prev.length + 1,
-          mine: false,
-          text: "確認しました。ここから詳細を詰めていきましょう。",
-          time: "今",
-        },
-      ]);
-      setIsPartnerTyping(false);
-    }, 900);
   };
 
-  if (!thread) {
+  if (loading) {
     return (
       <main
         style={{
@@ -95,10 +90,40 @@ export default function ChatDetailPage() {
         >
           チャット一覧へ戻る
         </button>
-        <p style={{ marginTop: 20, color: "#bbbbbb" }}>メッセージが見つかりませんでした。</p>
+        <p style={{ marginTop: 20, color: "#bbbbbb" }}>読み込み中...</p>
       </main>
     );
   }
+
+  if (error || !conversation) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          maxWidth: 480,
+          margin: "0 auto",
+          background: "#111111",
+          color: "#ffffff",
+          fontFamily: "'Segoe UI', sans-serif",
+          padding: "28px 20px",
+        }}
+      >
+        <button
+          onClick={() => router.push("/chat")}
+          style={{ background: "none", border: "none", color: "#8aff1d", cursor: "pointer", padding: 0 }}
+        >
+          チャット一覧へ戻る
+        </button>
+        <p style={{ marginTop: 20, color: "#bbbbbb" }}>
+          {error || "メッセージが見つかりませんでした。"}
+        </p>
+      </main>
+    );
+  }
+
+  const title = conversation.other_user?.username ?? "チャット";
+  const avatarInitial = (title[0] ?? "?").toUpperCase();
+  const otherUserId = conversation.other_user?.id;
 
   return (
     <main
@@ -132,9 +157,9 @@ export default function ChatDetailPage() {
           </svg>
         </button>
         <div>
-          <h1 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>{thread.title}</h1>
-          <p style={{ margin: "3px 0 0", color: thread.online ? "#4fc3a1" : "#888888", fontSize: "0.78rem" }}>
-            {thread.online ? "オンライン" : "オフライン"}
+          <h1 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>{title}</h1>
+          <p style={{ margin: "3px 0 0", color: "#888888", fontSize: "0.78rem" }}>
+            オフライン
           </p>
         </div>
       </header>
@@ -150,8 +175,14 @@ export default function ChatDetailPage() {
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
-            <p style={{ margin: 0, color: "#8a8a8a", fontSize: "0.74rem", letterSpacing: "0.08em" }}>PROJECT CONTEXT</p>
-            <h2 style={{ margin: "6px 0 0", fontSize: "0.96rem" }}>{thread.project}</h2>
+            <p style={{ margin: 0, color: "#8a8a8a", fontSize: "0.74rem", letterSpacing: "0.08em" }}>
+              PROJECT CONTEXT
+            </p>
+            <h2 style={{ margin: "6px 0 0", fontSize: "0.96rem" }}>
+              {conversation.project_id
+                ? `プロジェクト ${conversation.project_id.slice(0, 8)}`
+                : "ダイレクトメッセージ"}
+            </h2>
           </div>
           <span
             style={{
@@ -164,7 +195,7 @@ export default function ChatDetailPage() {
               whiteSpace: "nowrap",
             }}
           >
-            {thread.role}
+            {conversation.room_type === "PERSONAL_CHAT" ? "個人チャット" : "プロジェクト"}
           </span>
         </div>
       </section>
@@ -183,15 +214,13 @@ export default function ChatDetailPage() {
           今日
         </div>
         {messages.map((message) => {
-          if (message.mine) {
+          const isMine = otherUserId !== undefined ? message.sender.id !== otherUserId : false;
+
+          if (isMine) {
             return (
               <div
                 key={message.id}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  justifyContent: "flex-end",
-                }}
+                style={{ width: "100%", display: "flex", justifyContent: "flex-end" }}
               >
                 <div style={{ maxWidth: "78%" }}>
                   <div
@@ -204,7 +233,7 @@ export default function ChatDetailPage() {
                       lineHeight: 1.45,
                     }}
                   >
-                    {message.text}
+                    {message.content}
                   </div>
                   <p
                     style={{
@@ -214,7 +243,7 @@ export default function ChatDetailPage() {
                       fontSize: "0.72rem",
                     }}
                   >
-                    {message.time}
+                    {formatMessageTime(message.created_at)}
                   </p>
                 </div>
               </div>
@@ -232,14 +261,7 @@ export default function ChatDetailPage() {
                 gap: 5,
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  width: "100%",
-                }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
                 <div
                   style={{
                     width: 32,
@@ -255,9 +277,8 @@ export default function ChatDetailPage() {
                     flexShrink: 0,
                   }}
                 >
-                  {thread.avatar}
+                  {avatarInitial}
                 </div>
-
                 <div
                   style={{
                     maxWidth: "calc(78% - 40px)",
@@ -270,10 +291,9 @@ export default function ChatDetailPage() {
                     lineHeight: 1.45,
                   }}
                 >
-                  {message.text}
+                  {message.content}
                 </div>
               </div>
-
               <p
                 style={{
                   margin: "0 0 0 42px",
@@ -282,51 +302,11 @@ export default function ChatDetailPage() {
                   fontSize: "0.72rem",
                 }}
               >
-                {message.time}
+                {formatMessageTime(message.created_at)}
               </p>
             </div>
           );
         })}
-        {isPartnerTyping ? (
-          <div
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                border: "2px solid #1f4f26",
-                background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
-                color: "#2b1f1c",
-                display: "grid",
-                placeItems: "center",
-                fontSize: "0.8rem",
-                fontWeight: 800,
-                flexShrink: 0,
-              }}
-            >
-              {thread.avatar}
-            </div>
-            <div
-              style={{
-                background: "#1a1a1a",
-                border: "1px solid #2a2a2a",
-                color: "#aaaaaa",
-                borderRadius: 16,
-                padding: "10px 12px",
-                fontSize: "0.84rem",
-              }}
-            >
-              入力中...
-            </div>
-          </div>
-        ) : null}
         <div ref={endOfMessagesRef} />
       </section>
 
@@ -343,7 +323,6 @@ export default function ChatDetailPage() {
           background: "#111111",
         }}
       >
-        {/* クイックリプライ削除済み */}
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -376,13 +355,14 @@ export default function ChatDetailPage() {
           />
           <button
             type="submit"
+            disabled={!draft.trim() || isSending}
             style={{
               border: "none",
               background: "none",
-              color: draft.trim() ? "#8aff1d" : "#5f6b50",
+              color: draft.trim() && !isSending ? "#8aff1d" : "#5f6b50",
               fontWeight: 800,
               fontSize: "0.9rem",
-              cursor: draft.trim() ? "pointer" : "default",
+              cursor: draft.trim() && !isSending ? "pointer" : "default",
               padding: "0 8px",
             }}
           >

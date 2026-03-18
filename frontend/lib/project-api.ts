@@ -1,60 +1,44 @@
-// プロジェクト詳細・応募・参加APIクライアント
+import { apiUrl, buildAuthHeaders } from "@/lib/api";
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? "";
-
-export async function fetchProjectDetail(projectId: number) {
-  const response = await fetch(`${baseUrl}/api/project/${projectId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
+export async function fetchProjectDetail(projectId: string) {
+  const response = await fetch(apiUrl(`/api/projects/${projectId}/`), {
+    headers: buildAuthHeaders(),
     cache: "no-store",
   });
-  if (!response.ok) {
-    throw new Error("プロジェクト詳細の取得に失敗しました");
-  }
-  return await response.json();
+  if (!response.ok) throw new Error("プロジェクト詳細の取得に失敗しました");
+  return response.json();
 }
 
-export async function submitProjectApplication({
-  projectId,
-  role,
-  availability,
-  message,
-  portfolioUrl,
-}: {
-  projectId: number;
-  role: string;
-  availability: string;
-  message: string;
-  portfolioUrl?: string;
+export async function createProject(data: {
+  title: string;
+  description: string;
+  technologies?: string[];
+  categories?: string[];
+  progress_status?: string;
 }) {
-  const response = await fetch(`${baseUrl}/api/project/${projectId}/apply`, {
+  const response = await fetch(apiUrl("/api/projects/"), {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ role, availability, message, portfolioUrl }),
+    headers: buildAuthHeaders(),
+    body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("応募の送信に失敗しました");
+    const error = await response.json().catch(() => ({}));
+    throw new Error(
+      typeof error === "object" ? JSON.stringify(error) : "プロジェクトの作成に失敗しました",
+    );
   }
-  return await response.json();
+  return response.json();
 }
 
-export async function joinProject({
-  projectId,
-}: {
-  projectId: number;
-}) {
-  const response = await fetch(`${baseUrl}/api/project/${projectId}/join`, {
+export async function toggleSaveProject(projectId: string) {
+  const response = await fetch(apiUrl(`/api/projects/${projectId}/toggle_save/`), {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: buildAuthHeaders(),
   });
-  if (!response.ok) {
-    throw new Error("プロジェクト参加に失敗しました");
-  }
-  return await response.json();
+  if (!response.ok) throw new Error("保存状態の変更に失敗しました");
+  return response.json();
+}
+
+export async function joinProject({ projectId }: { projectId: string }) {
+  return toggleSaveProject(projectId);
 }

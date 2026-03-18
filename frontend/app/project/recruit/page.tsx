@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { HOME_CATEGORIES } from "@/lib/mock-data";
+import { createProject } from "@/lib/project-api";
 
 function isAllCategory(category: string) {
   return category === "All" || category === "すべて";
@@ -112,25 +113,18 @@ export default function ProjectRecruitPage() {
 
     setIsSubmitting(true);
 
-    const payload = {
-      title: trimmedTitle,
-      description: trimmedDescription,
-      skills,
-      category,
-      status,
-      image: projectImage,
-      imageName: projectImageName,
-      createdAt: new Date().toISOString(),
-    };
-
     try {
-      const raw = localStorage.getItem("projectRecruitDrafts");
-      const previous = raw ? (JSON.parse(raw) as unknown[]) : [];
-      const next = [payload, ...previous].slice(0, 30);
-      localStorage.setItem("projectRecruitDrafts", JSON.stringify(next));
+      await createProject({
+        title: trimmedTitle,
+        description: trimmedDescription,
+        technologies: skills.map((s) => s.toLowerCase()),
+        progress_status: status.toLowerCase(),
+      });
       router.push("/home");
-    } catch {
-      setFormError("保存に失敗しました。もう一度お試しください。");
+    } catch (err) {
+      setFormError(
+        err instanceof Error ? err.message : "作成に失敗しました。もう一度お試しください。",
+      );
     } finally {
       setIsSubmitting(false);
     }

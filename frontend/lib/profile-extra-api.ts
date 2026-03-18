@@ -1,11 +1,9 @@
-// プロフィール全情報（本体・プロジェクト・統計・スキル）をまとめて取得
+import { apiUrl, buildAuthHeaders } from "@/lib/api";
+
 export async function fetchProfileAll() {
-  const res = await fetch("/api/profile/me/", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
+  const res = await fetch(apiUrl("/api/profile/me/"), {
+    headers: buildAuthHeaders(),
+    cache: "no-store",
   });
   if (!res.ok) throw new Error("プロフィール情報の取得に失敗しました");
   return res.json();

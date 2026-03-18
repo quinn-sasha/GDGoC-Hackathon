@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HOME_CATEGORIES } from "@/lib/mock-data";
 import { fetchProfileAll } from "@/lib/profile-extra-api";
 import { joinProject } from "@/lib/project-api";
 import { fetchHomeFeed } from "@/lib/home-client";
@@ -20,6 +19,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   ONGOING: "進行中",
+  RECRUITING: "募集中",
   FEATURED: "注目",
   "IN REVIEW": "レビュー中",
   COMPLETED: "完了",
@@ -538,9 +538,11 @@ const S = {
 };
 
 export default function HomePage() {
-  const [activeCategory, setActiveCategory] = useState(HOME_CATEGORIES[0] ?? "すべて");
+  const [activeCategory, setActiveCategory] = useState<string>("すべて");
   const [searchQuery, setSearchQuery] = useState("");
-  const [categories, setCategories] = useState<string[]>(HOME_CATEGORIES);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [categories, setCategories] = useState<string[]>(["すべて"]);
+  const categorySlugMapRef = useRef<Record<string, string>>({});
   const [featured, setFeatured] = useState<any>(null);
   const [updates, setUpdates] = useState<any[]>([]);
   const [profileProjects, setProfileProjects] = useState([]);
@@ -592,39 +594,55 @@ export default function HomePage() {
     }
   };
 
+  // 検索デバウンス
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // ホームフィード取得: 検索・カテゴリ変更時に再フェッチ
   useEffect(() => {
     let isMounted = true;
+    const categorySlug = isAllCategory(activeCategory)
+      ? undefined
+      : (categorySlugMapRef.current[activeCategory] || undefined);
 
-    const loadHomeFeed = async () => {
-      try {
-        const data = await fetchHomeFeed();
+    fetchHomeFeed({
+      search: debouncedSearch || undefined,
+      category: categorySlug,
+    })
+      .then((data) => {
         if (!isMounted) return;
-        const nextCategories = data.categories?.length ? data.categories : HOME_CATEGORIES;
-        setCategories(nextCategories);
+        const catNames = ["すべて", ...data.categories.map((c) => c.name)];
+        categorySlugMapRef.current = Object.fromEntries(
+          data.categories.map((c) => [c.name, c.slug]),
+        );
+        setCategories(catNames);
         setFeatured(data.featured ?? null);
         setUpdates(Array.isArray(data.updates) ? data.updates : []);
-        setActiveCategory((prev) => nextCategories.includes(prev) ? prev : (nextCategories[0] ?? HOME_CATEGORIES[0] ?? "すべて"));
         setFetchError("");
-      } catch {
+      })
+      .catch(() => {
         if (!isMounted) return;
         setFetchError("最新の更新を同期できませんでした。保存済みデータを表示しています。");
-      }
+      });
+
+    return () => {
+      isMounted = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, activeCategory]);
 
-    const loadProfileProjects = async () => {
-      try {
-        const data = await fetchProfileAll();
-        if (!isMounted) return;
-        setProfileProjects(Array.isArray(data.projects) ? data.projects : []);
-      } catch {
-        if (!isMounted) return;
-        setProfileProjects([]);
-      }
-    };
-
-    loadHomeFeed();
-    loadProfileProjects();
-
+  // プロフィールプロジェクト取得 (初回のみ)
+  useEffect(() => {
+    let isMounted = true;
+    fetchProfileAll()
+      .then((data) => {
+        if (isMounted) setProfileProjects(Array.isArray(data.projects) ? data.projects : []);
+      })
+      .catch(() => {
+        if (isMounted) setProfileProjects([]);
+      });
     return () => {
       isMounted = false;
     };
@@ -633,15 +651,9 @@ export default function HomePage() {
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const isSearchMode = normalizedSearchQuery !== "";
 
+  // APIでフィルタ済みのため、カテゴリ整合性チェックのみクライアント側で行う
   const filteredUpdates = updates.filter((u) => {
-    const matchesCategory =
-      isAllCategory(activeCategory) || u.categoryTag === activeCategory;
-    const matchesSearch =
-      normalizedSearchQuery === "" ||
-      u.title.toLowerCase().includes(normalizedSearchQuery) ||
-      u.description.toLowerCase().includes(normalizedSearchQuery) ||
-      u.author.toLowerCase().includes(normalizedSearchQuery);
-    return matchesCategory && matchesSearch;
+    return isAllCategory(activeCategory) || u.categoryTag === activeCategory;
   });
 
   const sortedUpdates = [...filteredUpdates];
@@ -680,7 +692,7 @@ export default function HomePage() {
     setShowAllUpdates(false);
   };
 
-  const handleOpenProjectDetail = (projectId: number) => {
+  const handleOpenProjectDetail = (projectId: string) => {
     router.push(`/project/${projectId}`);
   };
 

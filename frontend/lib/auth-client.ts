@@ -1,3 +1,5 @@
+import { BASE_URL, setTokens } from "@/lib/api";
+
 export type AuthApiResult = {
   ok: boolean;
   message: string;
@@ -32,7 +34,6 @@ function extractMessage(data: ApiErrorBody | null): string {
   if (data.message) return String(data.message);
   if (data.detail) return String(data.detail);
   if (data.non_field_errors?.[0]) return String(data.non_field_errors[0]);
-  // フィールドエラー（例: {"email": ["既に存在します"]}）の最初のメッセージを返す
   for (const key of Object.keys(data)) {
     const val = data[key];
     if (Array.isArray(val) && typeof val[0] === "string") return val[0];
@@ -44,10 +45,7 @@ async function postJson<TPayload>(
   url: string,
   payload: TPayload,
 ): Promise<AuthApiResult> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ??
-    "http://localhost:8000";
-  const requestUrl = `${baseUrl}${url}`;
+  const requestUrl = `${BASE_URL}${url}`;
 
   const response = await fetch(requestUrl, {
     method: "POST",
@@ -57,11 +55,21 @@ async function postJson<TPayload>(
     body: JSON.stringify(payload),
   });
 
-  const data = (await response.json().catch(() => null)) as ApiErrorBody | null;
-  const message = extractMessage(data);
+  const data = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+  const message = extractMessage(data as ApiErrorBody | null);
+
+  // JWT トークンが含まれていれば保存 (login / verify-email)
+  if (
+    response.ok &&
+    data &&
+    typeof data.access === "string" &&
+    typeof data.refresh === "string"
+  ) {
+    setTokens(data.access, data.refresh);
+  }
 
   return {
-    ok: response.ok && (data?.ok ?? true),
+    ok: response.ok && ((data as ApiErrorBody)?.ok ?? true),
     message,
   };
 }

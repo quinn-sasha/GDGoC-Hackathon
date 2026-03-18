@@ -1,29 +1,32 @@
-// プロフィール取得
-export async function fetchProfile() {
-  const res = await fetch("/api/profile/me/", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include", // 認証が必要な場合
+import { apiUrl, buildAuthHeaders } from "@/lib/api";
+
+export type ProfileData = {
+  id: number;
+  username: string;
+  email: string;
+  profile_bio: string | null;
+  github_url: string | null;
+  icon_image_path: string | null;
+  skills: { id: number; name: string }[];
+  created_at: string;
+  updated_at: string;
+};
+
+export async function fetchProfile(): Promise<ProfileData> {
+  const res = await fetch(apiUrl("/api/profile/me/"), {
+    headers: buildAuthHeaders(),
+    cache: "no-store",
   });
   if (!res.ok) throw new Error("プロフィール取得に失敗しました");
   return res.json();
 }
 
-// プロフィール更新
-export async function updateProfile(data: Partial<ProfileSummary>) {
-  const res = await fetch("/api/profile/me/", {
+export async function updateProfile(data: Partial<ProfileData & { skill_ids?: number[] }>) {
+  const res = await fetch(apiUrl("/api/profile/me/"), {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
+    headers: buildAuthHeaders(),
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("プロフィール更新に失敗しました");
   return res.json();
 }
-
-// 型定義（既存のProfileSummaryを利用）
-import type { ProfileSummary } from "@/lib/mock-data";
