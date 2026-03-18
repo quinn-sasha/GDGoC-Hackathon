@@ -226,7 +226,7 @@ export default function HomePage() {
   const NavBarElement = mounted ? (isPC ? <SideNav active="home" /> : <BottomNav active="home" />) : null;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#111111", color: "#ffffff" }}>
+    <div style={{ minHeight: "100vh", background: "#111111", color: "#ffffff", paddingLeft: isPC ? 100 : 0 }}>
       {NavBarElement}
       <CommonHeader title="ホーム" isPC={isPC} />
       <main style={{ padding: 12 }}>
