@@ -169,10 +169,27 @@ export default function ProjectRecruitPage() {
             width: isPC ? 720 : 480,
             maxWidth: "calc(100% - 120px)",
             margin: isPC ? "0 0 0 12px" : "0 auto",
-            padding: "18px 18px 26px",
+            padding: isPC ? "18px 18px 26px" : "64px 18px 140px",
+            boxSizing: "border-box",
           }}
         >
-      <header style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 16,
+          ...(isPC
+            ? {}
+            : {
+                position: "fixed",
+                top: 8,
+                left: 12,
+                zIndex: 220,
+                width: "calc(100% - 24px)",
+              }),
+        }}
+      >
         <button
           type="button"
           aria-label="戻る"
