@@ -1,7 +1,6 @@
 import logging
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError, transaction
 from django.db.models import (
     Case,
     CharField,
@@ -21,8 +20,9 @@ from rest_framework.pagination import CursorPagination, PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Chatroom, ChatroomUser, Message, PersonalChatroom
+from .models import Chatroom, ChatroomUser, Message
 from .serializers import ConversationListSerializer, MessageSerializer
+from .services import get_or_create_personal_chatroom
 
 logger = logging.getLogger(__name__)
 
@@ -201,49 +201,9 @@ class ConversationViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # user1_id < user2_id に正規化してペアを一意に表現する
-        u1_id, u2_id = sorted([request.user.id, other_user.id])
-
-        # 既存ルームの確認
-        try:
-            personal = PersonalChatroom.objects.select_related("chatroom").get(
-                user1_id=u1_id, user2_id=u2_id
-            )
-            return self._chatroom_response(
-                personal.chatroom_id, request, status.HTTP_200_OK
-            )
-        except PersonalChatroom.DoesNotExist:
-            pass
-
-        # 新規作成。PersonalChatroom の unique_together が DB 制約として働き、
-        # 同時リクエストによる重複作成は IntegrityError で検出できる。
-        try:
-            with transaction.atomic():
-                chatroom = Chatroom.objects.create(room_type=Chatroom.RoomType.PERSONAL_CHAT)
-                ChatroomUser.objects.create(chatroom=chatroom, user=request.user)
-                ChatroomUser.objects.create(chatroom=chatroom, user=other_user)
-                PersonalChatroom.objects.create(
-                    chatroom=chatroom, user1_id=u1_id, user2_id=u2_id
-                )
-        except IntegrityError:
-            # 競合：別リクエストが先に作成済み → 既存を返す
-            # PersonalChatroom 以外の IntegrityError の場合は get() が DoesNotExist を上げるため再 raise する
-            logger.warning(
-                "PersonalChatroom 競合: user1_id=%s, user2_id=%s — 既存ルームを返します",
-                u1_id,
-                u2_id,
-            )
-            try:
-                personal = PersonalChatroom.objects.select_related("chatroom").get(
-                    user1_id=u1_id, user2_id=u2_id
-                )
-            except PersonalChatroom.DoesNotExist:
-                raise
-            return self._chatroom_response(
-                personal.chatroom_id, request, status.HTTP_200_OK
-            )
-
-        return self._chatroom_response(chatroom.id, request, status.HTTP_201_CREATED)
+        chatroom_id, created = get_or_create_personal_chatroom(request.user, other_user)
+        http_status = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return self._chatroom_response(chatroom_id, request, http_status)
 
     def _get_chatroom_for_member(self, pk, user):
         """チャットルームとメンバーシップを取得するヘルパー。
