@@ -88,7 +88,6 @@ const getResponsiveRootStyle = () => {
 };
 
 const S = {
-  root: {}, // ダミー。実際は下で動的に適用
   header: {
     display: "flex",
     alignItems: "center",
@@ -121,15 +120,7 @@ const S = {
     fontWeight: 700,
     color: "#fff",
   },
-  iconBtn: {
-    background: "none",
-    border: "none",
-    color: "#ffffff",
-    cursor: "pointer",
-    padding: 4,
-    display: "flex",
-    alignItems: "center",
-  },
+  // iconBtn: 未使用のため削除
   searchWrap: {
     position: "relative" as const,
     margin: "10px 20px",
@@ -338,20 +329,7 @@ const S = {
     background: "linear-gradient(180deg, rgba(8, 12, 14, 0.12) 0%, rgba(8, 12, 14, 0.72) 100%)",
     zIndex: 1,
   },
-  badgeOngoing: {
-    position: "absolute" as const,
-    top: 14,
-    right: 14,
-    background: "#1a3028",
-    color: "#4fc3a1",
-    border: "1px solid #2d5a47",
-    borderRadius: 6,
-    padding: "3px 10px",
-    fontSize: "0.7rem",
-    letterSpacing: "0.08em",
-    fontWeight: 700,
-    zIndex: 2,
-  },
+  // badgeOngoing: 未使用のため削除
   featuredBottom: {
     position: "relative" as const,
     zIndex: 2,
@@ -527,10 +505,10 @@ const S = {
     fontSize: "0.72rem",
     padding: "0 20px",
   },
-  createFab: {
+  createFab: (isMobile: boolean) => ({
     position: "fixed" as const,
     right: 20,
-    bottom: 20,
+    bottom: isMobile ? 100 : 20, // モバイル時はナビバー分上げる
     width: 72,
     height: 72,
     border: "none",
@@ -544,32 +522,24 @@ const S = {
     boxShadow: "0 12px 24px rgba(0, 0, 0, 0.35)",
     cursor: "pointer",
     zIndex: 120,
-  },
+  }),
 };
 
 export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setIsMobile(isMobileUA());
-    setMounted(true);
-    const handleResize = () => setIsMobile(isMobileUA());
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-  // SSR時はスマホ幅で固定
   const [rootStyle, setRootStyle] = useState(getResponsiveRootStyle()(false));
   useEffect(() => {
-    const isPC = window.innerWidth >= 900;
-    setRootStyle(getResponsiveRootStyle()(isPC));
-    const handleResize = () => setRootStyle(getResponsiveRootStyle()(window.innerWidth >= 900));
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-  useEffect(() => {
-    const handleResize = () => setRootStyle(getResponsiveRootStyle());
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    // PC/モバイル判定とrootStyleを一括管理
+    const updateDeviceState = () => {
+      const isPC = window.innerWidth >= 900;
+      setIsMobile(isMobileUA());
+      setRootStyle(getResponsiveRootStyle()(isPC));
+    };
+    updateDeviceState();
+    setMounted(true);
+    window.addEventListener("resize", updateDeviceState);
+    return () => window.removeEventListener("resize", updateDeviceState);
   }, []);
   const [activeCategory, setActiveCategory] = useState(HOME_CATEGORIES[0] ?? "すべて");
   const [searchQuery, setSearchQuery] = useState("");
@@ -1063,7 +1033,7 @@ export default function HomePage() {
         </section>
       </div>
 
-      <button type="button" style={S.createFab} onClick={() => router.push("/project/recruit")} aria-label="プロジェクト募集を作成">
+      <button type="button" style={S.createFab(isMobile)} onClick={() => router.push("/project/recruit")} aria-label="プロジェクト募集を作成">
         ＋
       </button>
 
