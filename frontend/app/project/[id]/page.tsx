@@ -3,11 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
-import { HOME_FEATURED, HOME_UPDATES, PROFILE_SKILLS, PROFILE_SUMMARY } from "@/lib/mock-data";
+import { PROFILE_SKILLS, PROFILE_SUMMARY } from "@/lib/mock-data";
 import { createApplicationChatThread } from "@/lib/chat-storage";
 import { buildProjectImage } from "@/lib/project-image";
+import { fetchProjectDetail, submitProjectApplication } from "@/lib/project-api";
 
 const STATUS_LABELS: Record<string, string> = {
   ONGOING: "進行中",
@@ -48,66 +49,52 @@ export default function ProjectDetailPage() {
   const router = useRouter();
   const projectId = Number(params.id);
 
-  const updateProject = HOME_UPDATES.find((item) => item.id === projectId);
-  const featuredProject = HOME_FEATURED.id === projectId
-    ? {
-        id: HOME_FEATURED.id,
-        title: HOME_FEATURED.title,
-        status: HOME_FEATURED.badge,
-        statusColor: HOME_FEATURED.statusColor,
-        statusBg: HOME_FEATURED.statusBg,
-        time: HOME_FEATURED.time,
-        description: HOME_FEATURED.description,
-        author: HOME_FEATURED.hostName,
-        category: HOME_FEATURED.category,
-        avatarInitial: HOME_FEATURED.hostInitial,
-      }
-    : null;
-
-  const project = updateProject ?? featuredProject;
-
-  const roleOptions = useMemo(() => getRoleOptions(project?.category ?? ""), [project?.category]);
-  const [selectedRole, setSelectedRole] = useState(roleOptions[0] ?? "");
+  const [project, setProject] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState("");
+  const [roleOptions, setRoleOptions] = useState<string[]>([]);
+  const [selectedRole, setSelectedRole] = useState("");
   const [availability, setAvailability] = useState(AVAILABILITY_OPTIONS[0]);
-  const [message, setMessage] = useState(
-    `はじめまして。${PROFILE_SUMMARY.name}です。プロジェクト内容に興味があり、まずは話を聞いてみたいです。`,
-  );
+  const [message, setMessage] = useState(`はじめまして。${PROFILE_SUMMARY.name}です。プロジェクト内容に興味があり、まずは話を聞いてみたいです。`);
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [createdChatId, setCreatedChatId] = useState<number | null>(null);
 
-  if (!project) {
+  // プロジェクト詳細取得
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setFetchError("");
+    fetchProjectDetail(projectId)
+      .then((data) => {
+        if (!isMounted) return;
+        setProject(data);
+        setRoleOptions(getRoleOptions(data.category ?? ""));
+        setSelectedRole(getRoleOptions(data.category ?? "")[0] ?? "");
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setFetchError("プロジェクト詳細の取得に失敗しました");
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setLoading(false);
+      });
+    return () => { isMounted = false; };
+  }, [projectId]);
+
+  if (loading) {
+    return <main style={{ minHeight: "100vh", maxWidth: 480, margin: "0 auto", background: "#111111", color: "#ffffff", fontFamily: "'Segoe UI', sans-serif", padding: "24px 20px 96px" }}>読み込み中...</main>;
+  }
+  if (fetchError || !project) {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          maxWidth: 480,
-          margin: "0 auto",
-          background: "#111111",
-          color: "#ffffff",
-          fontFamily: "'Segoe UI', sans-serif",
-          padding: "24px 20px 96px",
-        }}
-      >
+      <main style={{ minHeight: "100vh", maxWidth: 480, margin: "0 auto", background: "#111111", color: "#ffffff", fontFamily: "'Segoe UI', sans-serif", padding: "24px 20px 96px" }}>
         <h1 style={{ margin: "0 0 12px", fontSize: "1.5rem" }}>プロジェクトが見つかりません</h1>
-        <p style={{ margin: 0, color: "#aaaaaa", lineHeight: 1.6 }}>
-          指定されたプロジェクトは存在しないか、読み込みできませんでした。
-        </p>
-        <button
-          type="button"
-          onClick={() => router.push("/home")}
-          style={{
-            marginTop: 20,
-            borderRadius: 10,
-            border: "1px solid #333333",
-            background: "#1a1a1a",
-            color: "#ffffff",
-            padding: "10px 14px",
-            cursor: "pointer",
-          }}
-        >
+        <p style={{ margin: 0, color: "#aaaaaa", lineHeight: 1.6 }}>{fetchError || "指定されたプロジェクトは存在しないか、読み込みできませんでした。"}</p>
+        <button type="button" onClick={() => router.push("/home")}
+          style={{ marginTop: 20, borderRadius: 10, border: "1px solid #333333", background: "#1a1a1a", color: "#ffffff", padding: "10px 14px", cursor: "pointer" }}>
           ホームに戻る
         </button>
       </main>
@@ -119,35 +106,19 @@ export default function ProjectDetailPage() {
 
   const handleSubmitApplication = async () => {
     setSubmitError("");
-
     if (!canSubmit) {
       setSubmitError("応募する役割と参加ペースを選び、20文字以上のメッセージを入力してください。");
       return;
     }
-
     setIsSubmitting(true);
-
     try {
-      const nextEntry = {
+      await submitProjectApplication({
         projectId: project.id,
-        projectTitle: project.title,
         role: selectedRole,
         availability,
         message: message.trim(),
         portfolioUrl: portfolioUrl.trim(),
-        applicantName: PROFILE_SUMMARY.name,
-        applicantHandle: PROFILE_SUMMARY.handle,
-        submittedAt: new Date().toISOString(),
-      };
-      const raw = window.localStorage.getItem("projectApplications");
-      const previous = raw ? (JSON.parse(raw) as unknown[]) : [];
-      const next = [nextEntry, ...previous.filter((item) => {
-        if (!item || typeof item !== "object") {
-          return true;
-        }
-        return (item as { projectId?: number }).projectId !== project.id;
-      })].slice(0, 30);
-      window.localStorage.setItem("projectApplications", JSON.stringify(next));
+      });
       const createdChatThread = createApplicationChatThread({
         projectId: project.id,
         projectTitle: project.title,
@@ -159,7 +130,7 @@ export default function ProjectDetailPage() {
       setCreatedChatId(createdChatThread.id);
       setIsSubmitted(true);
     } catch {
-      setSubmitError("応募内容の保存に失敗しました。時間をおいて再度お試しください。");
+      setSubmitError("応募内容の送信に失敗しました。時間をおいて再度お試しください。");
     } finally {
       setIsSubmitting(false);
     }
