@@ -1,4 +1,3 @@
-
 "use client";
 import { isMobileUA } from "@/lib/device";
 import { BottomNav } from "@/components/BottomNav";
@@ -10,10 +9,10 @@ import { CommonCategoryTabs } from "@/components/CommonCategoryTabs";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchConversations, type Conversation } from "@/lib/conversation-client";
+import { fetchChatThreads } from "@/lib/chat-client";
 
 
-const FILTERS = ["すべて", "未読"] as const;
+const FILTERS = ["すべて", "未読", "オンライン"] as const;
 type ChatFilter = (typeof FILTERS)[number];
 
 
@@ -29,14 +28,14 @@ export default function ChatPage() {
   }, []);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<ChatFilter>("すべて");
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [threads, setThreads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchConversations()
+    fetchChatThreads()
       .then((data) => {
-        setConversations(data.results);
+        setThreads(data);
         setLoading(false);
       })
       .catch(() => {
@@ -46,20 +45,27 @@ export default function ChatPage() {
   }, []);
 
   const normalizedQuery = query.trim().toLowerCase();
-  const filteredConversations = useMemo(() => {
-    return conversations.filter((conv) => {
-      // ユーザー名・last_message・typeで検索
-      const otherUser = conv.users[0]; // 1対1想定
+  const filteredThreads = useMemo(() => {
+    return threads.filter((thread) => {
       const matchesQuery =
         normalizedQuery === "" ||
-        otherUser.username.toLowerCase().includes(normalizedQuery) ||
-        (conv.last_message?.content?.toLowerCase().includes(normalizedQuery) ?? false);
+        thread.title.toLowerCase().includes(normalizedQuery) ||
+        thread.project.toLowerCase().includes(normalizedQuery) ||
+        thread.role.toLowerCase().includes(normalizedQuery) ||
+        thread.preview.toLowerCase().includes(normalizedQuery);
+
       const matchesFilter =
         activeFilter === "すべて" ||
-        (activeFilter === "未読" && conv.unread_count > 0);
+        (activeFilter === "未読" && thread.unreadCount > 0) ||
+        (activeFilter === "オンライン" && thread.online);
+
       return matchesQuery && matchesFilter;
+    }).sort((left, right) => {
+      if (left.pinned && !right.pinned) return -1;
+      if (!left.pinned && right.pinned) return 1;
+      return right.unreadCount - left.unreadCount;
     });
-  }, [activeFilter, conversations, normalizedQuery]);
+  }, [activeFilter, threads, normalizedQuery]);
 
   // スケルトンUI
   const SkeletonList = (
@@ -128,7 +134,7 @@ export default function ChatPage() {
         onSelect={(cat: string) => setActiveFilter(cat as ChatFilter)}
       />
       <section style={{ padding: "0 20px 10px", color: "#7f7f7f", fontSize: "0.78rem" }}>
-        {filteredConversations.length}件の会話
+        {filteredThreads.length}件の会話
       </section>
       <section
         style={{
@@ -136,42 +142,54 @@ export default function ChatPage() {
           marginTop: 14,
         }}
       >
-        {filteredConversations.length === 0 ? (
+        {filteredThreads.length === 0 ? (
           <div style={{ padding: "28px 20px", color: "#8a8a8a", fontSize: "0.9rem", lineHeight: 1.7 }}>
             条件に一致するチャットはありません。検索語やフィルタを変えてください。
           </div>
-        ) : filteredConversations.map((conv) => {
-          const otherUser = conv.users[0];
-          return (
-            <article
-              key={conv.id}
-              onClick={() => router.push(`/chat/${conv.id}`)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  router.push(`/chat/${conv.id}`);
-                }
-              }}
+        ) : filteredThreads.map((thread) => (
+          <article
+            key={thread.id}
+            onClick={() => router.push(`/chat/${thread.id}`)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                router.push(`/chat/${thread.id}`);
+              }
+            }}
+            style={{
+              display: "flex",
+              gap: 14,
+              padding: "14px 20px",
+              cursor: "pointer",
+            }}
+          >
+            <div
               style={{
-                display: "flex",
-                gap: 14,
-                padding: "14px 20px",
-                cursor: "pointer",
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                background: "#1a1a1a",
+                border: "3px solid #1f4f26",
+                position: "relative",
+                boxShadow: thread.online ? "0 0 20px rgba(79, 195, 161, 0.18)" : "none",
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
               }}
             >
               <div
                 style={{
-                  width: 64,
-                  height: 64,
+                  width: 54,
+                  height: 54,
                   borderRadius: "50%",
-                  background: "#1a1a1a",
-                  border: "3px solid #1f4f26",
-                  position: "relative",
+                  background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
                   display: "grid",
                   placeItems: "center",
-                  flexShrink: 0,
+                  fontSize: "1.2rem",
+                  fontWeight: 800,
+                  color: "#2b1f1c",
                 }}
               >
                 <div
@@ -193,72 +211,81 @@ export default function ChatPage() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                    gap: 10,
-                  }}
-                >
-                  <h2
-                    style={{
-                      margin: 0,
-                      fontSize: "0.95rem",
-                      lineHeight: 1.3,
-                      fontWeight: 700,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {otherUser.username}
-                  </h2>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    {conv.unread_count > 0 ? (
-                      <span
-                        style={{
-                          minWidth: 20,
-                          height: 20,
-                          borderRadius: 999,
-                          padding: "0 6px",
-                          background: "#8aff1d",
-                          color: "#111111",
-                          display: "grid",
-                          placeItems: "center",
-                          fontSize: "0.72rem",
-                          fontWeight: 800,
-                        }}
-                      >
-                        {conv.unread_count}
-                      </span>
-                    ) : null}
-                    <span
-                      style={{
-                        color: "#888888",
-                        fontSize: "0.75rem",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {conv.last_message?.created_at ? new Date(conv.last_message.created_at).toLocaleString() : ""}
-                    </span>
-                  </div>
-                </div>
-                <p
-                  style={{
-                    margin: "6px 0 0",
-                    color: conv.unread_count > 0 ? "#dfdfdf" : "#999999",
-                    fontSize: "0.83rem",
-                    lineHeight: 1.5,
+                    margin: 0,
+                    fontSize: "0.95rem",
+                    lineHeight: 1.3,
+                    fontWeight: 700,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                   }}
                 >
-                  {conv.last_message?.content ?? "まだメッセージがありません"}
-                </p>
+                  {thread.title}
+                </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  {thread.unreadCount > 0 ? (
+                    <span
+                      style={{
+                        minWidth: 20,
+                        height: 20,
+                        borderRadius: 999,
+                        padding: "0 6px",
+                        background: "#8aff1d",
+                        color: "#111111",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {thread.unreadCount}
+                    </span>
+                  ) : null}
+                  <span
+                    style={{
+                      color: thread.online ? "#4fc3a1" : "#888888",
+                      fontSize: "0.75rem",
+                      fontWeight: thread.online ? 700 : 500,
+                    }}
+                  >
+                    {thread.time}
+                  </span>
+                </div>
               </div>
-            </article>
-          );
-        })}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7, minWidth: 0 }}>
+                {thread.pinned ? (
+                  <span style={{ color: "#8aff1d", fontSize: "0.72rem", fontWeight: 700 }}>固定</span>
+                ) : null}
+                <span
+                  style={{
+                    color: "#cfcfcf",
+                    fontSize: "0.76rem",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {thread.project}
+                </span>
+                <span style={{ color: "#555555" }}>•</span>
+                <span style={{ color: "#7f7f7f", fontSize: "0.76rem", whiteSpace: "nowrap" }}>{thread.role}</span>
+              </div>
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  color: thread.unreadCount > 0 ? "#dfdfdf" : "#999999",
+                  fontSize: "0.83rem",
+                  lineHeight: 1.5,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {thread.preview}
+              </p>
+            </div>
+          </article>
+        ))}
       </section>
       {isPC ? <SideNav active="chat" /> : <BottomNav active="chat" />}
     </main>

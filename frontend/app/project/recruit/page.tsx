@@ -1,10 +1,7 @@
-
 "use client";
-// 以降、importやロジックは"use client"の後に
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useEffect, type ChangeEvent, type FormEvent } from "react";
-import { isMobileUA } from "@/lib/device";
+import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { HOME_CATEGORIES } from "@/lib/mock-data";
 
 function isAllCategory(category: string) {
@@ -39,15 +36,6 @@ const TITLE_MAX = 60;
 const DESCRIPTION_MAX = 400;
 
 export default function ProjectRecruitPage() {
-  // SSR安全なデバイス判定
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    setIsMobile(isMobileUA());
-    const handleResize = () => setIsMobile(isMobileUA());
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
   const router = useRouter();
   const categoryOptions = useMemo(() => {
     const options = HOME_CATEGORIES.filter((category) => !isAllCategory(category));
@@ -149,68 +137,17 @@ export default function ProjectRecruitPage() {
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      maxWidth: isMobile ? 480 : "100vw",
-      margin: isMobile ? "0 auto" : "0",
-      background: "#111111",
-      color: "#ffffff",
-      fontFamily: "'Segoe UI', sans-serif",
-      position: "relative",
-      paddingLeft: isMobile ? 0 : 100,
-    }}>
-      {/* PC用ナビゲーションバー */}
-      {!isMobile && (
-        <nav
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            height: "100vh",
-            width: 100,
-            background: "#1a1a1a",
-            borderRight: "1px solid #2a2a2a",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-start",
-            alignItems: "center",
-            padding: "32px 0 0",
-            zIndex: 100,
-            gap: 8,
-          }}
-        >
-          <button style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 16, padding: "0 12px" }} onClick={() => router.push("/home") }>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
-            </svg>
-            <span style={{ fontSize: "0.82rem", color: "#fff", fontWeight: 700 }}>ホーム</span>
-          </button>
-          <button style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 16, padding: "0 12px" }} onClick={() => router.push("/chat") }>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-            <span style={{ fontSize: "0.82rem", color: "#fff", fontWeight: 700 }}>チャット</span>
-          </button>
-          <button style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 16, padding: "0 12px" }} onClick={() => router.push("/profile/me") }>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span style={{ fontSize: "0.82rem", color: "#fff", fontWeight: 700 }}>プロフィール</span>
-          </button>
-        </nav>
-      )}
-      <main
-        style={{
-          minHeight: "100vh",
-          maxWidth: isMobile ? 480 : 900,
-          margin: isMobile ? "0 auto" : "0",
-          background: "#111111",
-          color: "#ffffff",
-          fontFamily: "'Segoe UI', sans-serif",
-          padding: isMobile ? "18px 18px 26px" : "32px 48px 40px 48px",
-        }}
-      >
+    <main
+      style={{
+        minHeight: "100vh",
+        maxWidth: 480,
+        margin: "0 auto",
+        background: "#111111",
+        color: "#ffffff",
+        fontFamily: "'Segoe UI', sans-serif",
+        padding: "18px 18px 26px",
+      }}
+    >
       <header style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
         <button
           type="button"
@@ -579,6 +516,5 @@ export default function ProjectRecruitPage() {
         </div>
       ) : null}
     </main>
-  </div>
   );
 }

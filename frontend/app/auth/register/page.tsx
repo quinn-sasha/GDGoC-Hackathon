@@ -1,4 +1,3 @@
-
 "use client";
 import { isMobileUA } from "@/lib/device";
 import Link from "next/link";
@@ -54,33 +53,8 @@ export default function RegisterPage() {
     setIsSubmitting(false);
   };
 
-  // ナビバー共通
-  const NavBar = isMobile ? (
-    <nav
-      style={{
-        position: "fixed",
-        bottom: 0,
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: "100%",
-        maxWidth: 480,
-        background: "#1a1a1a",
-        borderTop: "1px solid #2a2a2a",
-        display: "flex",
-        justifyContent: "space-around",
-        padding: "10px 0 calc(10px + env(safe-area-inset-bottom))",
-        zIndex: 100,
-      }}
-    >
-      <button style={{ background: "none", border: "none", color: "#fff", font: "inherit", fontSize: "0.72rem", padding: "0 20px" }} onClick={() => router.push("/home")}>ホーム</button>
-      <button style={{ background: "none", border: "none", color: "#fff", font: "inherit", fontSize: "0.72rem", padding: "0 20px" }} onClick={() => router.push("/chat")}>チャット</button>
-      <button style={{ background: "none", border: "none", color: "#fff", font: "inherit", fontSize: "0.72rem", padding: "0 20px" }} onClick={() => router.push("/profile/me")}>プロフィール</button>
-    </nav>
-  ) : null;
-
   return (
     <main className="login-shell">
-      {NavBar}
       <section className="login-card" aria-labelledby="register-title">
         <p className="login-kicker">アカウント作成</p>
         <h1 id="register-title">メールアドレスで登録</h1>
