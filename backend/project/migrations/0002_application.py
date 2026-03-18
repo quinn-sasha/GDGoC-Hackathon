@@ -14,19 +14,26 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='Application',
-            fields=[
-                ('id', models.UUIDField(default=project.models.generate_uuid7, editable=False, primary_key=True, serialize=False)),
-                ('status', models.CharField(choices=[('pending', '申請中'), ('accepted', '承認済み'), ('rejected', '却下')], default='pending', max_length=20, verbose_name='ステータス')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='申請日時')),
-                ('applicant', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='applications', to=settings.AUTH_USER_MODEL, verbose_name='申請者')),
-                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='applications', to='project.project', verbose_name='プロジェクト')),
+        # project_application テーブルは本番 DB に既存のため DB 操作をスキップし、
+        # Django マイグレーション状態の更新のみ行う。
+        migrations.SeparateDatabaseAndState(
+            database_operations=[],
+            state_operations=[
+                migrations.CreateModel(
+                    name='Application',
+                    fields=[
+                        ('id', models.UUIDField(default=project.models.generate_uuid7, editable=False, primary_key=True, serialize=False)),
+                        ('status', models.CharField(choices=[('pending', '申請中'), ('accepted', '承認済み'), ('rejected', '却下')], default='pending', max_length=20, verbose_name='ステータス')),
+                        ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='申請日時')),
+                        ('applicant', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='applications', to=settings.AUTH_USER_MODEL, verbose_name='申請者')),
+                        ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='applications', to='project.project', verbose_name='プロジェクト')),
+                    ],
+                    options={
+                        'verbose_name': '参加申請',
+                        'verbose_name_plural': '参加申請',
+                        'unique_together': {('project', 'applicant')},
+                    },
+                ),
             ],
-            options={
-                'verbose_name': '参加申請',
-                'verbose_name_plural': '参加申請',
-                'unique_together': {('project', 'applicant')},
-            },
         ),
     ]
