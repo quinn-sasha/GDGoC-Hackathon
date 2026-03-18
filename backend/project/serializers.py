@@ -1,9 +1,6 @@
 import re
 from rest_framework import serializers
-
-import project
 from .models import Project, TechSkill, TechCategory, VibeTag
-from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
 
 
