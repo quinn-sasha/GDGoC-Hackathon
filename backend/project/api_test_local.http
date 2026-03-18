@@ -1,7 +1,7 @@
 # 変数の定義
-# メールアドレスは変更が必要です
+# メールアドレスはローカル利用時に各自の値に置き換えてください
 @host = http://localhost:8000
-@test_email = 88eragon@gmail.com
+@test_email = user@example.com
 @test_password = YourSecurePassword123!
 
 
