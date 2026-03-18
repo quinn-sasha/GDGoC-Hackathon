@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useMemo, useState, useEffect, type ChangeEvent, type FormEvent } from "react";
 import { HOME_CATEGORIES } from "@/lib/mock-data";
+import { isMobileUA } from "@/lib/device";
 
 function isAllCategory(category: string) {
   return category === "All" || category === "すべて";
@@ -53,6 +54,7 @@ export default function ProjectRecruitPage() {
   const [imageError, setImageError] = useState("");
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPC, setIsPC] = useState(false);
 
   const trimmedTitle = title.trim();
   const trimmedDescription = description.trim();
@@ -88,6 +90,13 @@ export default function ProjectRecruitPage() {
     };
     reader.readAsDataURL(file);
   };
+
+  useEffect(() => {
+    const update = () => setIsPC(window.innerWidth >= 900 && !isMobileUA());
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const clearImage = () => {
     setProjectImage(null);
@@ -140,12 +149,12 @@ export default function ProjectRecruitPage() {
     <main
       style={{
         minHeight: "100vh",
-        maxWidth: 480,
-        margin: "0 auto",
+        maxWidth: isPC ? 720 : 480,
+        margin: isPC ? "0" : "0 auto",
         background: "#111111",
         color: "#ffffff",
         fontFamily: "'Segoe UI', sans-serif",
-        padding: "18px 18px 26px",
+        padding: isPC ? "18px 18px 26px 100px" : "18px 18px 26px",
       }}
     >
       <header style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
@@ -429,10 +438,10 @@ export default function ProjectRecruitPage() {
           }}
           onClick={() => setShowSkillPicker(false)}
         >
-          <section
+            <section
             style={{
               width: "100%",
-              maxWidth: 480,
+              maxWidth: isPC ? 720 : 480,
               background: "#1a1a1a",
               borderRadius: "22px 22px 0 0",
               borderTop: "1px solid #2a2a2a",
