@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PROFILE_SUMMARY, PROFILE_SKILLS } from "@/lib/mock-data";
 import { updateProfile } from "@/lib/profile-api";
 
+export default function ProfileEditPage() {
   const router = useRouter();
 
   const [name, setName] = useState(PROFILE_SUMMARY.name);
