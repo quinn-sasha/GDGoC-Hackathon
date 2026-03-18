@@ -83,7 +83,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if self.action == "retrieve":
             # 詳細表示では全てのリレーションを取得
             queryset = queryset.prefetch_related(
-                "categories", "technologies", "vibes", "saved_by_users"
+                "categories", "technologies", "vibe_tags", "saved_by_users"
             )
             return queryset
         return queryset
@@ -103,7 +103,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     @action(
         detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
     )
-    def toggle_save(self, request):
+    def toggle_save(self, request, pk=None):
         """
         プロジェクトのお気に入り（保存）状態を切り替えるカスタムエンドポイント
         POST /api/projects/{id}/toggle_save/
