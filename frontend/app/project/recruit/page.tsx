@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { BottomNav } from "@/components/BottomNav";
+import { SideNav } from "@/components/SideNav";
 import { HOME_CATEGORIES } from "@/lib/mock-data";
 import { isMobileUA } from "@/lib/device";
 
@@ -55,6 +57,7 @@ export default function ProjectRecruitPage() {
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPC, setIsPC] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const trimmedTitle = title.trim();
   const trimmedDescription = description.trim();
@@ -94,9 +97,12 @@ export default function ProjectRecruitPage() {
   useEffect(() => {
     const update = () => setIsPC(window.innerWidth >= 900 && !isMobileUA());
     update();
+    setMounted(true);
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
+
+  const NavBarElement = mounted ? (isPC ? <SideNav active="home" /> : <BottomNav active="home" />) : null;
 
   const clearImage = () => {
     setProjectImage(null);
@@ -146,6 +152,8 @@ export default function ProjectRecruitPage() {
   };
 
   return (
+    <>
+    {NavBarElement}
     <main
       style={{
         minHeight: "100vh",
@@ -525,5 +533,6 @@ export default function ProjectRecruitPage() {
         </div>
       ) : null}
     </main>
+    </>
   );
 }
