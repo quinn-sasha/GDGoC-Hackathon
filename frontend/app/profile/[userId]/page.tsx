@@ -30,11 +30,21 @@ export default function UserProfilePage() {
       <main style={{ minHeight: "100vh", maxWidth: 480, margin: "0 auto", background: "#111111", color: "#ffffff", fontFamily: "'Segoe UI', sans-serif", paddingBottom: 96, position: "relative" }}>
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 8px" }}>
           <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800 }}>プロフィール</h1>
-          <button aria-label="戻る" style={{ background: "none", border: "none", color: "#888888", cursor: "pointer", padding: 4 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {/* 歯車マーク（設定） */}
+            <button aria-label="プロフィール編集" style={{ background: "none", border: "none", color: "#888888", cursor: "pointer", padding: 4 }} onClick={() => router.push("/profile/edit") }>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3.2" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5 15.4a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c.14.31.22.65.22 1v.09A1.65 1.65 0 0 0 21 12c0 .35-.08.69-.22 1v.09A1.65 1.65 0 0 0 19.4 15z" />
+              </svg>
+            </button>
+            {/* 戻るボタン */}
+            <button aria-label="戻る" style={{ background: "none", border: "none", color: "#888888", cursor: "pointer", padding: 4 }} onClick={() => router.back()}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+          </div>
         </header>
         <section style={{ padding: "8px 20px 0", textAlign: "center" }}>
           <div style={{ width: 156, height: 156, margin: "0 auto", borderRadius: "50%", border: "6px solid #1f4f26", background: "#1a1a1a", position: "relative", display: "grid", placeItems: "center", boxShadow: "0 10px 28px rgba(0, 0, 0, 0.28)" }}>
