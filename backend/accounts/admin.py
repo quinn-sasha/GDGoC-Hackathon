@@ -6,10 +6,10 @@ from .models import EmailVerificationToken, User
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ("email", "is_active", "is_staff", "created_at")
+    list_display = ("email", "is_active", "is_staff", "date_joined")
     list_filter = ("is_active", "is_staff")
     search_fields = ("email",)
-    ordering = ("-created_at",)
+    ordering = ("-date_joined",)
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         (
@@ -24,7 +24,7 @@ class UserAdmin(BaseUserAdmin):
                 )
             },
         ),
-        ("日時", {"fields": ("created_at",)}),
+        ("日時", {"fields": ("date_joined",)}),
     )
     add_fieldsets = (
         (
@@ -35,7 +35,7 @@ class UserAdmin(BaseUserAdmin):
             },
         ),
     )
-    readonly_fields = ("created_at",)
+    readonly_fields = ("date_joined",)
 
 
 @admin.register(EmailVerificationToken)
