@@ -2,78 +2,81 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { getAllChatThreads, getStoredChatMessages, saveChatMessages, type StoredChatMessage } from "@/lib/chat-storage";
 
-import { fetchMessages, sendMessage, markAsRead, type Message } from "@/lib/conversation-client";
+function getDefaultMessages(preview?: string, time?: string): StoredChatMessage[] {
+  return [
+    {
+      id: 1,
+      mine: false,
+      text: preview ?? "",
+      time: time ?? "今",
+    },
+    {
+      id: 2,
+      mine: true,
+      text: "了解です。詳細をこのスレッドで進めましょう。",
+      time: "今",
+    },
+  ];
+}
 
 export default function ChatDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const conversationId = params.id;
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
-  const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
-  // 会話情報をlocalStorageから取得
-  const [thread, setThread] = useState<any>(null);
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const conversationsRaw = window.localStorage.getItem("conversations");
-      if (conversationsRaw) {
-        try {
-          const conversations = JSON.parse(conversationsRaw);
-          const found = conversations.find((c: any) => String(c.id) === String(conversationId));
-          setThread(found || null);
-        } catch {
-          setThread(null);
-        }
-      }
-    }
-  }, [conversationId]);
+  const threadId = Number(params.id);
 
-  useEffect(() => {
-    setLoading(true);
-    setError("");
-    fetchMessages(conversationId)
-      .then((data) => {
-        setMessages(data.results);
-        setLoading(false);
-        // 既読マーク
-        if (data.results.length > 0) {
-          const lastMsg = data.results[data.results.length - 1];
-          markAsRead(conversationId, lastMsg.id).catch(() => {});
-        }
-      })
-      .catch(() => {
-        setError("メッセージ取得に失敗しました");
-        setLoading(false);
-      });
-  }, [conversationId]);
+  const thread = getAllChatThreads().find((item) => item.id === threadId);
+  const [messages, setMessages] = useState<StoredChatMessage[]>(() =>
+    getStoredChatMessages(threadId, getDefaultMessages(thread?.preview, thread?.time)),
+  );
+  const [draft, setDraft] = useState("");
+  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
+  const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
 
-  const handleSend = async (value?: string) => {
-    const nextText = (value ?? draft).trim();
-    if (!nextText || sending) return;
-    setSending(true);
-    try {
-      const msg = await sendMessage(conversationId, nextText);
-      setMessages((prev) => [...prev, msg]);
-      setDraft("");
-      // 送信後に既読マーク
-      markAsRead(conversationId, msg.id).catch(() => {});
-    } catch {
-      alert("メッセージ送信に失敗しました");
-    } finally {
-      setSending(false);
+  useEffect(() => {
+    if (!thread) {
+      return;
     }
+
+    saveChatMessages(thread.id, messages);
+  }, [messages, thread]);
+
+  const handleSend = (value?: string) => {
+    const nextText = (value ?? draft).trim();
+    if (!nextText) return;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: prev.length + 1,
+        mine: true,
+        text: nextText,
+        time: "今",
+      },
+    ]);
+    setDraft("");
+    setIsPartnerTyping(true);
+
+    window.setTimeout(() => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          mine: false,
+          text: "確認しました。ここから詳細を詰めていきましょう。",
+          time: "今",
+        },
+      ]);
+      setIsPartnerTyping(false);
+    }, 900);
   };
 
-
-  if (loading || error || !thread) {
+  if (!thread) {
     return (
       <main
         style={{
@@ -92,7 +95,7 @@ export default function ChatDetailPage() {
         >
           チャット一覧へ戻る
         </button>
-        <p style={{ marginTop: 20, color: "#bbbbbb" }}>{error || (!thread ? "会話情報が見つかりません" : "読み込み中...")}</p>
+        <p style={{ marginTop: 20, color: "#bbbbbb" }}>メッセージが見つかりませんでした。</p>
       </main>
     );
   }
@@ -180,42 +183,45 @@ export default function ChatDetailPage() {
           今日
         </div>
         {messages.map((message) => {
-          const isMine = message.sender && typeof window !== "undefined" && window.localStorage && window.localStorage.getItem("userId") === String(message.sender.id);
-          return isMine ? (
-            <div
-              key={message.id}
-              style={{
-                width: "100%",
-                display: "flex",
-                justifyContent: "flex-end",
-              }}
-            >
-              <div style={{ maxWidth: "78%" }}>
-                <div
-                  style={{
-                    background: "#8aff1d",
-                    color: "#111111",
-                    borderRadius: 16,
-                    padding: "10px 12px",
-                    fontSize: "0.9rem",
-                    lineHeight: 1.45,
-                  }}
-                >
-                  {message.content}
+          if (message.mine) {
+            return (
+              <div
+                key={message.id}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <div style={{ maxWidth: "78%" }}>
+                  <div
+                    style={{
+                      background: "#8aff1d",
+                      color: "#111111",
+                      borderRadius: 16,
+                      padding: "10px 12px",
+                      fontSize: "0.9rem",
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {message.text}
+                  </div>
+                  <p
+                    style={{
+                      margin: "5px 2px 0",
+                      textAlign: "right",
+                      color: "#888888",
+                      fontSize: "0.72rem",
+                    }}
+                  >
+                    {message.time}
+                  </p>
                 </div>
-                <p
-                  style={{
-                    margin: "5px 2px 0",
-                    textAlign: "right",
-                    color: "#888888",
-                    fontSize: "0.72rem",
-                  }}
-                >
-                  {new Date(message.created_at).toLocaleTimeString()}
-                </p>
               </div>
-            </div>
-          ) : (
+            );
+          }
+
+          return (
             <div
               key={message.id}
               style={{
@@ -249,9 +255,9 @@ export default function ChatDetailPage() {
                     flexShrink: 0,
                   }}
                 >
-                  {/* TODO: ユーザーアバター表示（APIから取得する場合は要調整） */}
-                  {message.sender.username[0]}
+                  {thread.avatar}
                 </div>
+
                 <div
                   style={{
                     maxWidth: "calc(78% - 40px)",
@@ -264,9 +270,10 @@ export default function ChatDetailPage() {
                     lineHeight: 1.45,
                   }}
                 >
-                  {message.content}
+                  {message.text}
                 </div>
               </div>
+
               <p
                 style={{
                   margin: "0 0 0 42px",
@@ -275,11 +282,51 @@ export default function ChatDetailPage() {
                   fontSize: "0.72rem",
                 }}
               >
-                {new Date(message.created_at).toLocaleTimeString()}
+                {message.time}
               </p>
             </div>
           );
         })}
+        {isPartnerTyping ? (
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                border: "2px solid #1f4f26",
+                background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
+                color: "#2b1f1c",
+                display: "grid",
+                placeItems: "center",
+                fontSize: "0.8rem",
+                fontWeight: 800,
+                flexShrink: 0,
+              }}
+            >
+              {thread.avatar}
+            </div>
+            <div
+              style={{
+                background: "#1a1a1a",
+                border: "1px solid #2a2a2a",
+                color: "#aaaaaa",
+                borderRadius: 16,
+                padding: "10px 12px",
+                fontSize: "0.84rem",
+              }}
+            >
+              入力中...
+            </div>
+          </div>
+        ) : null}
         <div ref={endOfMessagesRef} />
       </section>
 
@@ -326,7 +373,6 @@ export default function ChatDetailPage() {
               outline: "none",
               fontSize: "0.9rem",
             }}
-            disabled={sending}
           />
           <button
             type="submit"
@@ -336,10 +382,9 @@ export default function ChatDetailPage() {
               color: draft.trim() ? "#8aff1d" : "#5f6b50",
               fontWeight: 800,
               fontSize: "0.9rem",
-              cursor: draft.trim() && !sending ? "pointer" : "default",
+              cursor: draft.trim() ? "pointer" : "default",
               padding: "0 8px",
             }}
-            disabled={!draft.trim() || sending}
           >
             送信
           </button>
