@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     "accounts",
     "home",
     "project",
+    "profile",
+    "message",
 ]
 
 MIDDLEWARE = [

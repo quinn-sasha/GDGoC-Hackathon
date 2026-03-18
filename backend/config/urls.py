@@ -7,6 +7,11 @@ urlpatterns = [
     # 認証エンドポイント
     path("api/auth/", include("accounts.urls")),
     path("api/projects/", include("project.urls")),
+    # 各機能エンドポイント
+    path("api/home/", include("home.urls")),
+    path("api/", include("project.urls")),
+    path("api/profile/", include("profile.urls")),
+    path("api/message/", include("message.urls")),
     # API ドキュメント
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
