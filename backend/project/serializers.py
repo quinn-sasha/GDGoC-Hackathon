@@ -89,7 +89,6 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
             "technologies",
             "categories",
             "vibe_tags",
-            "saved_by_users",
             "num_saved",
             "is_saved",
         ]
