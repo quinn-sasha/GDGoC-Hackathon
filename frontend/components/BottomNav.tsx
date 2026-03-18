@@ -34,7 +34,7 @@ export const BottomNav = ({ active }: { active: "home" | "chat" | "profile" }) =
         </svg>
         <span>チャット</span>
       </button>
-      <button style={{ background: "none", border: "none", color: active === "profile" ? "#fff" : "#666", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.72rem", padding: "0 20px" }} onClick={() => router.push(`/profile`)}>
+      <button style={{ background: "none", border: "none", color: active === "profile" ? "#fff" : "#666", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.72rem", padding: "0 20px" }} onClick={() => router.push(`/profile/me`)}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
           <circle cx="12" cy="7" r="4" />

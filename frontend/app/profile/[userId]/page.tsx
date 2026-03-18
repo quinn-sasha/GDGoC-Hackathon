@@ -120,7 +120,7 @@ export default function UserProfilePage() {
         >
           <button style={{ background: "none", border: "none", color: "#fff", font: "inherit", fontSize: "1rem", marginBottom: 32, cursor: "pointer" }} onClick={() => router.push("/home")}>🏠</button>
           <button style={{ background: "none", border: "none", color: "#fff", font: "inherit", fontSize: "1rem", marginBottom: 32, cursor: "pointer" }} onClick={() => router.push("/chat")}>💬</button>
-          <button style={{ background: "none", border: "none", color: "#fff", font: "inherit", fontSize: "1rem", marginBottom: 32, cursor: "pointer" }} onClick={() => router.push(`/profile`)}>👤</button>
+          <button style={{ background: "none", border: "none", color: "#fff", font: "inherit", fontSize: "1rem", marginBottom: 32, cursor: "pointer" }} onClick={() => router.push(`/profile/me`)}>👤</button>
         </nav>
       ) : (
         <nav

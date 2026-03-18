@@ -35,7 +35,7 @@ export const SideNav = ({ active }: { active: "home" | "chat" | "profile" }) => 
         </svg>
         <span style={{ fontSize: "0.82rem", color: "#fff", fontWeight: 700 }}>チャット</span>
       </button>
-      <button style={{ background: "none", border: "none", color: active === "profile" ? "#fff" : "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 16, padding: "0 12px" }} onClick={() => router.push(`/profile`)}>
+      <button style={{ background: "none", border: "none", color: active === "profile" ? "#fff" : "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 16, padding: "0 12px" }} onClick={() => router.push(`/profile/me`)}>
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
           <circle cx="12" cy="7" r="4" />
