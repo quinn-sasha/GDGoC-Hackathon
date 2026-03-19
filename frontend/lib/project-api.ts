@@ -2,12 +2,20 @@
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
 
+function getAuthHeaders(): Record<string, string> {
+  const token =
+    typeof window !== "undefined"
+      ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
+      : null;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
 export async function fetchProjectDetail(projectId: number) {
   const response = await fetch(`${baseUrl}/api/project/${projectId}`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
   if (!response.ok) {
@@ -31,9 +39,7 @@ export async function submitProjectApplication({
 }) {
   const response = await fetch(`${baseUrl}/api/project/${projectId}/apply`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ role, availability, message, portfolioUrl }),
   });
   if (!response.ok) {
@@ -49,9 +55,7 @@ export async function joinProject({
 }) {
   const response = await fetch(`${baseUrl}/api/project/${projectId}/join`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: getAuthHeaders(),
   });
   if (!response.ok) {
     throw new Error("プロジェクト参加に失敗しました");
