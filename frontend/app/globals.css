@@ -37,7 +37,7 @@ body {
 }
 
 .login-card {
-  width: min(100%, 560px);
+  width: min(100%, 720px);
   padding: 36px;
   border-radius: 20px;
   border: 1px solid var(--border);
@@ -54,10 +54,74 @@ body {
   font-weight: 700;
 }
 
+/* ── Auth pages: force dark mode for login/register ───────────────────────── */
+.login-shell.auth-dark {
+  background:
+    radial-gradient(circle at 15% 20%, #081012 0%, transparent 38%),
+    radial-gradient(circle at 90% 85%, #0e0912 0%, transparent 42%),
+    linear-gradient(145deg, #07080a 0%, #0b0c0f 50%, #060608 100%);
+  color: #e6efe9;
+}
+
+.login-shell.auth-dark .login-card {
+  background: color-mix(in oklab, #0b0b0d 92%, #0a0a0a 8%);
+  border: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+}
+
+.login-shell.auth-dark .login-kicker {
+  color: #97a49d;
+}
+
+.login-shell.auth-dark .login-card h1 {
+  color: #ffffff;
+}
+
+.login-shell.auth-dark .login-subtitle {
+  color: #bfc9c4;
+}
+
+.login-shell.auth-dark .login-form input[type="email"],
+.login-shell.auth-dark .login-form input[type="password"],
+.login-shell.auth-dark .login-form input[type="text"] {
+  background: #0e0f10;
+  border: 1px solid rgba(255,255,255,0.04);
+  color: #e8efe9;
+}
+
+.login-shell.auth-dark .login-form input[type="email"]:focus,
+.login-shell.auth-dark .login-form input[type="password"]:focus,
+.login-shell.auth-dark .login-form input[type="text"]:focus {
+  outline: 2px solid color-mix(in oklab, var(--primary) 35%, #000);
+  outline-offset: 1px;
+}
+
+.login-shell.auth-dark .login-form button {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.login-shell.auth-dark .login-error {
+  color: #ffd6d6;
+  background: #3a0b0b;
+  border: 1px solid rgba(255,80,80,0.08);
+}
+
+.login-shell.auth-dark .login-success {
+  color: #daf6e3;
+  background: #053a1f;
+  border: 1px solid rgba(62,190,133,0.12);
+}
+
+.login-shell.auth-dark .text-link {
+  color: #7fb7ff;
+}
+
 .login-card h1 {
   margin: 10px 0 10px;
   font-size: clamp(1.75rem, 2.2vw, 2.1rem);
   line-height: 1.2;
+  text-align: center;
 }
 
 .login-subtitle {

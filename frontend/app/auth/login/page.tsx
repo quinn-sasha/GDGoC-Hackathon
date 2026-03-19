@@ -66,7 +66,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="login-shell">
+    <main className="login-shell auth-dark">
       <section className="login-card" aria-labelledby="login-title">
         <h1 id="login-title">アカウントにサインイン</h1>
 
