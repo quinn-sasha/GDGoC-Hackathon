@@ -1,21 +1,14 @@
 // プロジェクト詳細・一覧・作成・応募APIクライアント
 
+import { getAuthToken } from "@/lib/auth-client";
+
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
 
 function getAuthHeaders(): Record<string, string> {
-  const token =
-    typeof window !== "undefined"
-      ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
-      : null;
+  const token = getAuthToken();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
-}
-
-function getAuthToken(): string | null {
-  return typeof window !== "undefined"
-    ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
-    : null;
 }
 
 export async function fetchProjects() {

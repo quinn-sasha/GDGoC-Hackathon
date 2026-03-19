@@ -1,20 +1,13 @@
+import { getAuthToken } from "@/lib/auth-client";
+
 const BASE =
   process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
 
 function getAuthHeaders(): Record<string, string> {
-  const token =
-    typeof window !== "undefined"
-      ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
-      : null;
+  const token = getAuthToken();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
-}
-
-function getAuthToken(): string | null {
-  return typeof window !== "undefined"
-    ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
-    : null;
 }
 
 // 自分のプロフィール取得

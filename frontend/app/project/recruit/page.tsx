@@ -50,6 +50,7 @@ export default function ProjectRecruitPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
+  const [imageWarning, setImageWarning] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPC, setIsPC] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -104,6 +105,7 @@ export default function ProjectRecruitPage() {
     }
 
     setIsSubmitting(true);
+    setImageWarning("");
 
     try {
       // バックエンドは英数字と . + # - スペースのみ許可
@@ -121,7 +123,9 @@ export default function ProjectRecruitPage() {
         try {
           await uploadProjectImage(String(project.id), imageFile);
         } catch {
-          // 画像アップロード失敗はサイレントに無視
+          setImageWarning("画像のアップロードに失敗しました。プロジェクトは作成されました。");
+          setIsSubmitting(false);
+          return;
         }
       }
       router.push("/home");
@@ -388,6 +392,9 @@ export default function ProjectRecruitPage() {
 
             {formError ? (
               <p style={{ margin: "12px 0 0", color: "#ff7d7d", fontSize: "0.83rem" }}>{formError}</p>
+            ) : null}
+            {imageWarning ? (
+              <p style={{ margin: "12px 0 0", color: "#ffcc44", fontSize: "0.83rem" }}>{imageWarning}</p>
             ) : null}
 
             <div style={{ display: "flex", gap: 10, marginTop: 22 }}>

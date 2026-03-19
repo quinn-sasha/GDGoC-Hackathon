@@ -84,18 +84,12 @@ class UploadIconView(APIView):
                 {"detail": "image フィールドにファイルを添付してください。"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        allowed_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-        if file.content_type not in allowed_types:
-            return Response(
-                {"detail": "JPEG・PNG・WebP・GIF のみアップロードできます。"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if file.size > 5 * 1024 * 1024:
-            return Response(
-                {"detail": "ファイルサイズは 5MB 以内にしてください。"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        from config.gcs import upload_image as gcs_upload, build_user_icon_path
+        from config.gcs import upload_image as gcs_upload, build_user_icon_path, validate_image_file
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        try:
+            validate_image_file(file)
+        except DRFValidationError as e:
+            return Response({"detail": e.detail[0]}, status=status.HTTP_400_BAD_REQUEST)
         try:
             dest = build_user_icon_path(request.user.id, file.name)
             url = gcs_upload(file, dest)

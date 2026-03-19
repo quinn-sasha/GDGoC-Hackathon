@@ -27,6 +27,7 @@ export default function ProfileEditPage() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [imageWarning, setImageWarning] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
 
@@ -88,13 +89,14 @@ export default function ProfileEditPage() {
     if (!canSave) return;
     setSaving(true);
     setSaveError(null);
+    setImageWarning(null);
     try {
       // アイコン画像が選択されていればアップロード（失敗しても他の更新は続行）
       if (avatarFile) {
         try {
           await uploadProfileIcon(avatarFile);
         } catch {
-          // 画像アップロード失敗はサイレントに無視
+          setImageWarning("画像のアップロードに失敗しました。他の情報は保存されました。");
         }
       }
       await updateProfile({
@@ -377,9 +379,12 @@ export default function ProfileEditPage() {
                 />
               )}
 
-              {/* エラーメッセージ */}
+              {/* エラー・警告メッセージ */}
               {saveError && (
                 <p style={{ margin: "4px 0 0", color: "#ff7d7d", fontSize: "0.83rem" }}>{saveError}</p>
+              )}
+              {imageWarning && (
+                <p style={{ margin: "4px 0 0", color: "#ffcc44", fontSize: "0.83rem" }}>{imageWarning}</p>
               )}
 
               {/* 保存ボタン */}
