@@ -68,12 +68,7 @@ export default function LoginPage() {
   return (
     <main className="login-shell">
       <section className="login-card" aria-labelledby="login-title">
-        <h1
-          id="login-title"
-          style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
-        >
-          アカウントにサインイン
-        </h1>
+        <h1 id="login-title">アカウントにサインイン</h1>
 
         <form className="login-form" onSubmit={handleSubmit}>
           <label htmlFor="email">メールアドレス</label>
