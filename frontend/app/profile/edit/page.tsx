@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { isMobileUA } from "@/lib/device";
+import { SideNav } from "@/components/SideNav";
 import { PROFILE_SUMMARY, PROFILE_SKILLS } from "@/lib/mock-data";
 import { updateProfile } from "@/lib/profile-api";
 
 export default function ProfileEditPage() {
   const router = useRouter();
+
+  const [isPC, setIsPC] = useState(false);
+
+  useEffect(() => {
+    setIsPC(window.innerWidth >= 900 && !isMobileUA());
+    const handleResize = () => setIsPC(window.innerWidth >= 900 && !isMobileUA());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const [name, setName] = useState(PROFILE_SUMMARY.name);
   const [handle, setHandle] = useState(PROFILE_SUMMARY.handle);
@@ -69,14 +80,16 @@ export default function ProfileEditPage() {
     <main
       style={{
         minHeight: "100vh",
-        maxWidth: 480,
-        margin: "0 auto",
+        maxWidth: isPC ? "100vw" : 480,
+        margin: isPC ? "0" : "0 auto",
         background: "#111111",
         color: "#ffffff",
         fontFamily: "'Segoe UI', sans-serif",
         paddingBottom: 96,
+        paddingLeft: isPC ? 100 : 0,
       }}
     >
+      {isPC ? <SideNav active="profile" /> : null}
       {/* Header */}
       <header
         style={{
@@ -86,15 +99,6 @@ export default function ProfileEditPage() {
           padding: "16px 20px 8px",
         }}
       >
-        <button
-          aria-label="戻る"
-          onClick={() => router.back()}
-          style={{ background: "none", border: "none", color: "#ffffff", cursor: "pointer", padding: 4 }}
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
         <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 800 }}>プロフィール編集</h1>
       </header>
 
