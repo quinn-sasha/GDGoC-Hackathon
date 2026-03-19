@@ -8,7 +8,6 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls")),
     path("api/projects/", include("project.urls")),
     # 各機能エンドポイント
-    path("api/home/", include("home.urls")),
     path("api/profile/", include("profile.urls")),
     path("api/", include("message.urls")),
     # API ドキュメント
