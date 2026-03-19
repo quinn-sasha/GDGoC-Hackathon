@@ -62,6 +62,8 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
     num_saved = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
     is_applied = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
+    chatroom_id = serializers.SerializerMethodField()
 
     def get_num_saved(self, obj):
         return obj.saved_by_users.count()
@@ -79,6 +81,24 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
         if not request or not request.user.is_authenticated:
             return False
         return obj.applications.filter(applicant=request.user).exists()
+
+    def get_is_owner(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.owner == request.user
+
+    def get_chatroom_id(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        from message.models import Chatroom
+        chatroom = Chatroom.objects.filter(
+            room_type=Chatroom.RoomType.PROJECT_CHAT,
+            project=obj,
+            members__user=request.user,
+        ).first()
+        return str(chatroom.id) if chatroom else None
 
     class Meta:
         model = Project
@@ -99,6 +119,8 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
             "num_saved",
             "is_saved",
             "is_applied",
+            "is_owner",
+            "chatroom_id",
         ]
         read_only_fields = fields
 

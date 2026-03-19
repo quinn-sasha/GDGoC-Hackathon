@@ -48,3 +48,34 @@ def get_or_create_personal_chatroom(user_a, user_b):
         return personal.chatroom_id, False
 
     return chatroom.id, True
+
+
+def get_or_create_project_chatroom(project, applicant):
+    """プロジェクト応募時の PROJECT_CHAT を取得または作成する。
+
+    (project, applicant) の組み合わせごとに1つのルームを保証する。
+    同じ2ユーザーでも別プロジェクトなら別ルームが作成される。
+
+    Returns:
+        (chatroom_id, created): chatroom_id は UUID、created は新規作成なら True。
+    """
+    # 既存ルームの確認
+    existing = Chatroom.objects.filter(
+        room_type=Chatroom.RoomType.PROJECT_CHAT,
+        project=project,
+        members__user=applicant,
+    ).first()
+    if existing:
+        return existing.id, False
+
+    # 新規作成
+    with transaction.atomic():
+        chatroom = Chatroom.objects.create(
+            room_type=Chatroom.RoomType.PROJECT_CHAT,
+            project=project,
+        )
+        ChatroomUser.objects.create(chatroom=chatroom, user=applicant)
+        if project.owner != applicant:
+            ChatroomUser.objects.create(chatroom=chatroom, user=project.owner)
+
+    return chatroom.id, True

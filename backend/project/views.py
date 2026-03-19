@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 
+from message.services import get_or_create_project_chatroom
+
 from .models import Project, Application
 from .serializers import (
     ProjectListSerializer,
@@ -114,6 +116,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
         POST /api/projects/{id}/apply/
         """
         project = self.get_object()
+        if project.owner == request.user:
+            return Response(
+                {"detail": "自分のプロジェクトには応募できません。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if Application.objects.filter(project=project, applicant=request.user).exists():
             return Response(
                 {"detail": "すでにこのプロジェクトに申請済みです。"},
@@ -122,7 +129,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer = ApplicationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(project=project, applicant=request.user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        chatroom_id, _ = get_or_create_project_chatroom(project, request.user)
+        return Response(
+            {**serializer.data, "chatroom_id": str(chatroom_id)},
+            status=status.HTTP_201_CREATED,
+        )
 
     @extend_schema(
         summary="お気に入り登録・解除",

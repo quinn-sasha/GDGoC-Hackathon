@@ -8,7 +8,6 @@ import { useState, useEffect } from "react";
 import { buildProjectImage } from "@/lib/project-image";
 import { fetchProjectDetail, submitProjectApplication } from "@/lib/project-api";
 import { fetchProfile } from "@/lib/profile-api";
-import { createConversation } from "@/lib/chat-client";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
 import { isMobileUA } from "@/lib/device";
@@ -100,10 +99,8 @@ export default function ProjectDetailPage() {
         if (data.is_applied) {
           setIsAlreadyApplied(true);
           setIsSubmitted(true);
-          if (data.owner) {
-            createConversation(data.owner)
-              .then((conv) => setChatId(conv.id))
-              .catch(() => {});
+          if (data.chatroom_id) {
+            setChatId(data.chatroom_id);
           }
         }
       })
@@ -165,6 +162,8 @@ export default function ProjectDetailPage() {
   const statusStyle = STATUS_STYLE[project.progress_status] ?? { bg: "#1a1a1a", color: "#888888" };
   const timeStr = formatRelativeTime(project.updated_at);
 
+  const isOwner = project.is_owner === true;
+
   const messageLength = message.trim().length;
   const canSubmit = selectedRole !== "" && availability !== "" && messageLength >= 20 && !isSubmitting;
 
@@ -176,7 +175,7 @@ export default function ProjectDetailPage() {
     }
     setIsSubmitting(true);
     try {
-      await submitProjectApplication({
+      const result = await submitProjectApplication({
         projectId: project.id,
         role: selectedRole,
         availability,
@@ -184,20 +183,16 @@ export default function ProjectDetailPage() {
         portfolioUrl: portfolioUrl.trim(),
       });
       setIsSubmitted(true);
-      if (project.owner) {
-        createConversation(project.owner)
-          .then((conv) => setChatId(conv.id))
-          .catch(() => {});
+      if (result.chatroom_id) {
+        setChatId(result.chatroom_id);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "応募の送信に失敗しました。";
       if (msg.includes("申請済み")) {
         setIsAlreadyApplied(true);
         setIsSubmitted(true);
-        if (project.owner) {
-          createConversation(project.owner)
-            .then((conv) => setChatId(conv.id))
-            .catch(() => {});
+        if (project.chatroom_id) {
+          setChatId(project.chatroom_id);
         }
       } else {
         setSubmitError(msg);
@@ -220,12 +215,31 @@ export default function ProjectDetailPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div>
           <p style={{ margin: 0, color: "#8d8d8d", fontSize: "0.75rem", letterSpacing: "0.08em" }}>APPLICATION</p>
-          <h2 style={{ margin: "6px 0 0", fontSize: "1.05rem" }}>このプロジェクトに応募する</h2>
+          <h2 style={{ margin: "6px 0 0", fontSize: "1.05rem" }}>
+            {isOwner ? "あなたのプロジェクト" : "このプロジェクトに応募する"}
+          </h2>
         </div>
         <span style={{ borderRadius: 999, background: "#222222", color: "#d0d0d0", padding: "8px 12px", fontSize: "0.76rem", whiteSpace: "nowrap" }}>
           募集中
         </span>
       </div>
+
+      {isOwner && (
+        <div
+          style={{
+            marginTop: 16,
+            borderRadius: 16,
+            background: "rgba(100, 120, 255, 0.08)",
+            border: "1px solid rgba(100, 120, 255, 0.25)",
+            padding: "14px",
+          }}
+        >
+          <p style={{ margin: 0, color: "#a0b0ff", fontWeight: 700 }}>オーナーは応募できません</p>
+          <p style={{ margin: "8px 0 0", color: "#c7c7c7", fontSize: "0.86rem", lineHeight: 1.6 }}>
+            このプロジェクトはあなたが作成しました。
+          </p>
+        </div>
+      )}
 
       {userProfile && (
         <div
@@ -267,7 +281,7 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {!isSubmitted && (
+      {!isOwner && !isSubmitted && (
         <>
           <div style={{ marginTop: 18 }}>
             <label style={{ display: "block", color: "#8d8d8d", fontSize: "0.8rem", marginBottom: 10 }}>応募したい役割</label>
@@ -370,7 +384,7 @@ export default function ProjectDetailPage() {
       )}
 
       {/* PCレイアウト用ボタン（インライン表示） */}
-      {isPC && (
+      {isPC && !isOwner && (
         <div style={{ marginTop: 20 }}>
           {isSubmitted ? (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -562,7 +576,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* モバイル用固定ボタン */}
-      {!isPC && mounted && (
+      {!isPC && mounted && !isOwner && (
         <div
           style={{
             position: "fixed", left: "50%", bottom: 0,
