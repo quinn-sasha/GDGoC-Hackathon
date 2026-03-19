@@ -42,6 +42,16 @@ export default function VerifyEmailPage() {
       setIsSubmitting(false);
       return;
     }
+    // 保存されたトークンがあればストレージに格納する
+    try {
+      if ((result as any).access) {
+        // 永続化の要否は既定で localStorage にする
+        localStorage.setItem("access_token", (result as any).access);
+        if ((result as any).refresh) localStorage.setItem("refresh_token", (result as any).refresh);
+      }
+    } catch {
+      // 無視: 環境によっては storage が利用不可
+    }
 
     setSuccessMessage("メール認証が完了しました。ホームへ移動します...");
     setTimeout(() => {

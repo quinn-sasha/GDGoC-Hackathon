@@ -39,6 +39,21 @@ export default function LoginPage() {
         return;
       }
 
+      // Store tokens if returned (localStorage/sessionStorage)
+      if (result.access) {
+        try {
+          if (payload.remember) {
+            localStorage.setItem("access_token", result.access);
+            if (result.refresh) localStorage.setItem("refresh_token", result.refresh);
+          } else {
+            sessionStorage.setItem("access_token", result.access);
+            if (result.refresh) sessionStorage.setItem("refresh_token", result.refresh);
+          }
+        } catch {
+          /* ignore storage errors in restricted environments */
+        }
+      }
+
       router.push("/home");
     } catch {
       setErrorMessage("通信エラーが発生しました。時間をおいて再試行してください。");

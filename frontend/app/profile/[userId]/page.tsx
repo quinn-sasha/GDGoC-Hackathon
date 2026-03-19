@@ -22,9 +22,13 @@ export default function UserProfilePage() {
   useEffect(() => {
     if (!userId) return;
     async function fetchProfileById(userId: string) {
+      const token = typeof window !== "undefined" ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token")) : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const res = await fetch(`/api/profile/${encodeURIComponent(userId)}/`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
       });
       if (!res.ok) throw new Error("プロフィール取得に失敗しました");

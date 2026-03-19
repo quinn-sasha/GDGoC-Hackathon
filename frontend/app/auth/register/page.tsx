@@ -25,8 +25,9 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     setErrorMessage("");
     setSuccessMessage("");
-
-    const formData = new FormData(event.currentTarget);
+    // Save form reference because the synthetic event may be released after awaits
+    const form = event.currentTarget as HTMLFormElement | null;
+    const formData = new FormData(form ?? undefined);
     const email = String(formData.get("email") ?? "").trim();
     const username = String(formData.get("username") ?? "").trim();
     const password = String(formData.get("password") ?? "");
@@ -49,7 +50,7 @@ export default function RegisterPage() {
     setSuccessMessage(
       "登録が完了しました。メールを確認してアカウント認証を行ってください。",
     );
-    event.currentTarget.reset();
+    form?.reset();
     setIsSubmitting(false);
   };
 
