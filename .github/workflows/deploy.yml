@@ -11,6 +11,7 @@ env:
   REGION: ${{ vars.GCP_REGION || 'asia-northeast1' }}
   REPOSITORY: ${{ vars.AR_REPOSITORY || 'gdgoc-hackathon' }}
   REGISTRY_HOST: asia-northeast1-docker.pkg.dev
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # どのパスが変更されたか検出（push時のみ有効・workflow_dispatch時は全実行）
