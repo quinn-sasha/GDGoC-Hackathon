@@ -1,6 +1,8 @@
 export type AuthApiResult = {
   ok: boolean;
   message: string;
+  access?: string;
+  refresh?: string;
 };
 
 type ApiErrorBody = {
@@ -63,6 +65,8 @@ async function postJson<TPayload>(
   return {
     ok: response.ok && (data?.ok ?? true),
     message,
+    access: data?.access as string | undefined,
+    refresh: data?.refresh as string | undefined,
   };
 }
 
