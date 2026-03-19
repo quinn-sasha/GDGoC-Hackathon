@@ -83,7 +83,7 @@ export default function SearchClient({ initialQuery }: { initialQuery?: string }
           onChange={(e) => setSearch(e.target.value)}
           onClear={() => setSearch("")}
           placeholder="プロジェクト、アイデアを検索"
-          onSubmit={() => router.push(`/search?q=${encodeURIComponent(search)}`)}
+          onSubmit={(v) => router.push(`/search?q=${encodeURIComponent((v ?? search) || "")}`)}
         />
 
         <section style={S.section}>
