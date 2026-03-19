@@ -5,7 +5,7 @@ import { CommonSearchBar } from "@/components/CommonSearchBar";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
 import { fetchHomeFeed, type HomeFeedUpdate } from "@/lib/home-client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const S = {
   section: { padding: "12px 20px 8px" },
@@ -30,9 +30,18 @@ export default function SearchClient({ initialQuery }: { initialQuery?: string }
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  const searchParams = useSearchParams();
+
   useEffect(() => {
-    setSearch(initialQuery ?? "");
-  }, [initialQuery]);
+    // Prefer the live URL query when available (client-side navigation),
+    // otherwise fall back to the server-provided initialQuery.
+    const paramQ = typeof searchParams?.get === "function" ? searchParams.get("q") : undefined;
+    if (paramQ != null) {
+      setSearch(paramQ);
+    } else {
+      setSearch(initialQuery ?? "");
+    }
+  }, [initialQuery, searchParams]);
 
   useEffect(() => {
     let isMounted = true;
