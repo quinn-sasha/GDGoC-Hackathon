@@ -1,13 +1,21 @@
 "use client";
-
+import { isMobileUA } from "@/lib/device";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { login } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(isMobileUA());
+    const handleResize = () => setIsMobile(isMobileUA());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -29,6 +37,21 @@ export default function LoginPage() {
       if (!result.ok) {
         setErrorMessage(result.message);
         return;
+      }
+
+      // Store tokens if returned (localStorage/sessionStorage)
+      if (result.access) {
+        try {
+          if (payload.remember) {
+            localStorage.setItem("access_token", result.access);
+            if (result.refresh) localStorage.setItem("refresh_token", result.refresh);
+          } else {
+            sessionStorage.setItem("access_token", result.access);
+            if (result.refresh) sessionStorage.setItem("refresh_token", result.refresh);
+          }
+        } catch {
+          /* ignore storage errors in restricted environments */
+        }
       }
 
       router.push("/home");

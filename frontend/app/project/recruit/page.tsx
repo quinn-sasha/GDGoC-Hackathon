@@ -1,8 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useMemo, useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { BottomNav } from "@/components/BottomNav";
+import { SideNav } from "@/components/SideNav";
 import { HOME_CATEGORIES } from "@/lib/mock-data";
+import { isMobileUA } from "@/lib/device";
 
 function isAllCategory(category: string) {
   return category === "All" || category === "すべて";
@@ -53,6 +56,8 @@ export default function ProjectRecruitPage() {
   const [imageError, setImageError] = useState("");
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPC, setIsPC] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const trimmedTitle = title.trim();
   const trimmedDescription = description.trim();
@@ -88,6 +93,16 @@ export default function ProjectRecruitPage() {
     };
     reader.readAsDataURL(file);
   };
+
+  useEffect(() => {
+    const update = () => setIsPC(window.innerWidth >= 900 && !isMobileUA());
+    update();
+    setMounted(true);
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const NavBarElement = mounted ? (isPC ? <SideNav active="home" /> : <BottomNav active="home" />) : null;
 
   const clearImage = () => {
     setProjectImage(null);
@@ -137,18 +152,44 @@ export default function ProjectRecruitPage() {
   };
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        maxWidth: 480,
-        margin: "0 auto",
-        background: "#111111",
-        color: "#ffffff",
-        fontFamily: "'Segoe UI', sans-serif",
-        padding: "18px 18px 26px",
-      }}
-    >
-      <header style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+    <>
+      {NavBarElement}
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#111111",
+          color: "#ffffff",
+          paddingLeft: isPC ? 100 : 0,
+          display: "flex",
+          justifyContent: "flex-start",
+        }}
+      >
+        <main
+          style={{
+            width: isPC ? 720 : 480,
+            maxWidth: "calc(100% - 120px)",
+            margin: isPC ? "0 0 0 12px" : "0 auto",
+            padding: isPC ? "18px 18px 26px" : "64px 18px 140px",
+            boxSizing: "border-box",
+          }}
+        >
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 16,
+          ...(isPC
+            ? {}
+            : {
+                position: "fixed",
+                top: 8,
+                left: 12,
+                zIndex: 220,
+                width: "calc(100% - 24px)",
+              }),
+        }}
+      >
         <button
           type="button"
           aria-label="戻る"
@@ -429,10 +470,10 @@ export default function ProjectRecruitPage() {
           }}
           onClick={() => setShowSkillPicker(false)}
         >
-          <section
+            <section
             style={{
               width: "100%",
-              maxWidth: 480,
+              maxWidth: isPC ? 720 : 480,
               background: "#1a1a1a",
               borderRadius: "22px 22px 0 0",
               borderTop: "1px solid #2a2a2a",
@@ -515,6 +556,8 @@ export default function ProjectRecruitPage() {
           </section>
         </div>
       ) : null}
-    </main>
+        </main>
+      </div>
+    </>
   );
 }

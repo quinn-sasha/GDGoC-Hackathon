@@ -1,11 +1,21 @@
 "use client";
-
+import { isMobileUA } from "@/lib/device";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { register } from "@/lib/auth-client";
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(isMobileUA());
+    const handleResize = () => setIsMobile(isMobileUA());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -15,8 +25,9 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     setErrorMessage("");
     setSuccessMessage("");
-
-    const formData = new FormData(event.currentTarget);
+    // Save form reference because the synthetic event may be released after awaits
+    const form = event.currentTarget as HTMLFormElement | null;
+    const formData = new FormData(form ?? undefined);
     const email = String(formData.get("email") ?? "").trim();
     const username = String(formData.get("username") ?? "").trim();
     const password = String(formData.get("password") ?? "");
@@ -39,7 +50,7 @@ export default function RegisterPage() {
     setSuccessMessage(
       "登録が完了しました。メールを確認してアカウント認証を行ってください。",
     );
-    event.currentTarget.reset();
+    form?.reset();
     setIsSubmitting(false);
   };
 
