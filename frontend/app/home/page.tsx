@@ -11,6 +11,7 @@ import { buildProjectImage } from "@/lib/project-image";
 import { HOME_CATEGORIES } from "@/lib/mock-data";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { buildUrl } from "@/lib/url";
 
 const S = {
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 8px" },
@@ -233,7 +234,7 @@ export default function HomePage() {
           onChange={(e) => setSearch(e.target.value)}
           onClear={() => setSearch("")}
           placeholder="プロジェクト、アイデアを検索"
-          onSubmit={(v) => router.push(`/search?q=${encodeURIComponent((v ?? search) || "")}`)}
+          onSubmit={(v) => router.push(buildUrl("/search", { q: (v ?? search) || "" }))}
         />
         <CommonCategoryTabs categories={categories} active={activeCat} onSelect={(c) => setActiveCat(c)} />
 

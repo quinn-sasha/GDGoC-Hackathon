@@ -5,6 +5,7 @@ import { CommonSearchBar } from "@/components/CommonSearchBar";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
 import { fetchHomeFeed, type HomeFeedUpdate } from "@/lib/home-client";
+import { buildUrl } from "@/lib/url";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const S = {
@@ -92,7 +93,7 @@ export default function SearchClient({ initialQuery }: { initialQuery?: string }
           onChange={(e) => setSearch(e.target.value)}
           onClear={() => setSearch("")}
           placeholder="プロジェクト、アイデアを検索"
-          onSubmit={(v) => router.push(`/search?q=${encodeURIComponent((v ?? search) || "")}`)}
+          onSubmit={(v) => router.push(buildUrl("/search", { q: (v ?? search) || "" }))}
         />
 
         <section style={S.section}>
