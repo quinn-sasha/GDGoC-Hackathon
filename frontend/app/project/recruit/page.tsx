@@ -55,8 +55,8 @@ export default function ProjectRecruitPage() {
   const trimmedTitle = title.trim();
   const trimmedDescription = description.trim();
   const canSubmit =
-    trimmedTitle.length >= 3 &&
-    trimmedDescription.length >= 10 &&
+    trimmedTitle.length > 0 &&
+    trimmedDescription.length > 0 &&
     skills.length > 0 &&
     !isSubmitting;
 
@@ -86,7 +86,9 @@ export default function ProjectRecruitPage() {
     setFormError("");
 
     if (!canSubmit) {
-      setFormError("必須項目を入力し、スキルを1つ以上選択してください。");
+      if (!trimmedTitle) setFormError("タイトルを入力してください。");
+      else if (!trimmedDescription) setFormError("募集内容を入力してください。");
+      else if (skills.length === 0) setFormError("スキルを1つ以上選択してください。");
       return;
     }
 
