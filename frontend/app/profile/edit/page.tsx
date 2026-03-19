@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { updateProfile, fetchProfile, fetchSkills } from "@/lib/profile-api";
+import { updateProfile, fetchProfile, fetchSkills, uploadProfileIcon } from "@/lib/profile-api";
 import { isMobileUA } from "@/lib/device";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
@@ -22,6 +22,7 @@ export default function ProfileEditPage() {
   const [allSkills, setAllSkills] = useState<Skill[]>([]);
   const [avatarInitial, setAvatarInitial] = useState("?");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [profileLoading, setProfileLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,6 +69,7 @@ export default function ProfileEditPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setAvatarFile(file);
     const reader = new FileReader();
     reader.onload = () => setAvatarPreview(reader.result as string);
     reader.readAsDataURL(file);
@@ -87,6 +89,10 @@ export default function ProfileEditPage() {
     setSaving(true);
     setSaveError(null);
     try {
+      // アイコン画像が選択されていればアップロード
+      if (avatarFile) {
+        await uploadProfileIcon(avatarFile);
+      }
       await updateProfile({
         username: name,
         profile_bio: bio,

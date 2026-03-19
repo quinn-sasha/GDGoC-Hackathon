@@ -11,6 +11,12 @@ function getAuthHeaders(): Record<string, string> {
   return headers;
 }
 
+function getAuthToken(): string | null {
+  return typeof window !== "undefined"
+    ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
+    : null;
+}
+
 // 自分のプロフィール取得
 export async function fetchProfile() {
   const res = await fetch(`${BASE}/api/profile/me/`, {
@@ -38,6 +44,30 @@ export async function fetchSkills(): Promise<{ id: number; name: string }[]> {
   });
   if (!res.ok) throw new Error("スキル一覧取得に失敗しました");
   return res.json();
+}
+
+// プロフィールアイコンをアップロード
+export async function uploadProfileIcon(file: File): Promise<string> {
+  const token = getAuthToken();
+  const formData = new FormData();
+  formData.append("image", file);
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/profile/me/upload-icon/`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  if (!res.ok) {
+    let detail = "アイコンのアップロードに失敗しました";
+    try {
+      const err = await res.json();
+      if (err.detail) detail = String(err.detail);
+    } catch { /* ignore */ }
+    throw new Error(detail);
+  }
+  const data = await res.json();
+  return data.icon_image_path as string;
 }
 
 // 他ユーザーのプロフィール取得（me の場合は自分のプロフィール）

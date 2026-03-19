@@ -1,6 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
+from rest_framework.parsers import MultiPartParser
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import TechSkill
 from .serializers import MyProfileSerializer, TechSkillSerializer, UserProfileSerializer
@@ -56,6 +60,53 @@ class TechSkillListView(generics.ListAPIView):
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+
+@extend_schema(tags=["プロフィール"])
+class UploadIconView(APIView):
+    """POST /api/profile/me/upload-icon/ — プロフィールアイコンを GCS にアップロード"""
+
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(
+        summary="プロフィールアイコンをアップロード",
+        responses={
+            200: OpenApiResponse(description="アップロード成功"),
+            400: OpenApiResponse(description="ファイルなし・形式エラー"),
+            503: OpenApiResponse(description="GCS 未設定"),
+        },
+    )
+    def post(self, request):
+        file = request.FILES.get("image")
+        if not file:
+            return Response(
+                {"detail": "image フィールドにファイルを添付してください。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        allowed_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+        if file.content_type not in allowed_types:
+            return Response(
+                {"detail": "JPEG・PNG・WebP・GIF のみアップロードできます。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if file.size > 5 * 1024 * 1024:
+            return Response(
+                {"detail": "ファイルサイズは 5MB 以内にしてください。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from config.gcs import upload_image as gcs_upload, build_user_icon_path
+        try:
+            dest = build_user_icon_path(request.user.id, file.name)
+            url = gcs_upload(file, dest)
+        except ImproperlyConfigured:
+            return Response(
+                {"detail": "画像ストレージが設定されていません。"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        request.user.icon_image_path = url
+        request.user.save(update_fields=["icon_image_path"])
+        return Response({"icon_image_path": url}, status=status.HTTP_200_OK)
 
 
 @extend_schema(tags=["プロフィール"])

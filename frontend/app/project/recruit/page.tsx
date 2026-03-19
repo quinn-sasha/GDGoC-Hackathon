@@ -5,7 +5,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
 import { isMobileUA } from "@/lib/device";
-import { createProject } from "@/lib/project-api";
+import { createProject, uploadProjectImage } from "@/lib/project-api";
 
 const STATUS_OPTIONS = [
   { value: "opening", label: "開始前" },
@@ -47,6 +47,8 @@ export default function ProjectRecruitPage() {
   const [skills, setSkills] = useState<string[]>([]);
   const [showSkillPicker, setShowSkillPicker] = useState(false);
   const [status, setStatus] = useState(STATUS_OPTIONS[0]?.value ?? "opening");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPC, setIsPC] = useState(false);
@@ -75,6 +77,15 @@ export default function ProjectRecruitPage() {
 
   const NavBarElement = mounted ? (isPC ? <SideNav active="home" /> : <BottomNav active="home" />) : null;
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const toggleSkill = (skill: string) => {
     setSkills((prev) =>
       prev.includes(skill) ? prev.filter((item) => item !== skill) : [...prev, skill],
@@ -99,12 +110,20 @@ export default function ProjectRecruitPage() {
       const validTechs = skills
         .map((s) => s.toLowerCase().trim())
         .filter((s) => /^[a-z0-9\s.+#-]+$/.test(s));
-      await createProject({
+      const project = await createProject({
         title: trimmedTitle,
         description: trimmedDescription,
         progress_status: status,
         technologies: validTechs,
       });
+      // 画像が選択されていればアップロード（失敗しても作成自体は成功とする）
+      if (imageFile && project?.id) {
+        try {
+          await uploadProjectImage(String(project.id), imageFile);
+        } catch {
+          // 画像アップロード失敗はサイレントに無視
+        }
+      }
       router.push("/home");
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "プロジェクトの作成に失敗しました。");
@@ -286,6 +305,63 @@ export default function ProjectRecruitPage() {
               >
                 スキルを選択
               </button>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", color: "#8b8b8b", marginBottom: 8 }}>
+                  サムネイル画像（任意）
+                </label>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "100%",
+                    aspectRatio: "16 / 9",
+                    maxHeight: 220,
+                    borderRadius: 12,
+                    border: "1px dashed #3b3b3b",
+                    background: imagePreview ? "transparent" : "#1a1a1a",
+                    cursor: "pointer",
+                    overflow: "hidden",
+                    position: "relative",
+                  }}
+                >
+                  {imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="プレビュー"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <span style={{ color: "#5a5a5a", fontSize: "0.85rem" }}>
+                      クリックして画像を選択
+                    </span>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleImageChange}
+                    style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
+                  />
+                </label>
+                {imageFile && (
+                  <button
+                    type="button"
+                    onClick={() => { setImageFile(null); setImagePreview(null); }}
+                    style={{
+                      marginTop: 6,
+                      background: "none",
+                      border: "none",
+                      color: "#8b8b8b",
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    画像を削除
+                  </button>
+                )}
+              </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", color: "#8b8b8b", marginBottom: 8 }}>ステータス</label>

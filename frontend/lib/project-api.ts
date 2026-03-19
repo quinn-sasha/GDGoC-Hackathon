@@ -12,6 +12,12 @@ function getAuthHeaders(): Record<string, string> {
   return headers;
 }
 
+function getAuthToken(): string | null {
+  return typeof window !== "undefined"
+    ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
+    : null;
+}
+
 export async function fetchProjects() {
   const response = await fetch(`${baseUrl}/api/projects/`, {
     method: "GET",
@@ -56,6 +62,29 @@ export async function createProject(data: {
     throw new Error(detail);
   }
   return await response.json();
+}
+
+export async function uploadProjectImage(projectId: string, file: File): Promise<string> {
+  const token = getAuthToken();
+  const formData = new FormData();
+  formData.append("image", file);
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const response = await fetch(`${baseUrl}/api/projects/${projectId}/upload-image/`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    let detail = "画像のアップロードに失敗しました";
+    try {
+      const err = await response.json();
+      if (err.detail) detail = String(err.detail);
+    } catch { /* ignore */ }
+    throw new Error(detail);
+  }
+  const data = await response.json();
+  return data.project_image_path as string;
 }
 
 export type ProjectApplication = {
