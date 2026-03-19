@@ -109,8 +109,13 @@ export default function UserProfilePage() {
       </header>
       <section style={{ padding: "8px 20px 0", textAlign: "center" }}>
         <div style={{ width: 156, height: 156, margin: "0 auto", borderRadius: "50%", border: "6px solid #1f4f26", background: "#1a1a1a", position: "relative", display: "grid", placeItems: "center", boxShadow: "0 10px 28px rgba(0, 0, 0, 0.28)" }}>
-          <div style={{ width: 140, height: 140, borderRadius: "50%", background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)", display: "grid", placeItems: "center", fontSize: "2.4rem", fontWeight: 800, color: "#2b1f1c" }}>
-            {profile.username?.[0]?.toUpperCase() ?? "?"}
+          <div style={{ width: 140, height: 140, borderRadius: "50%", background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)", display: "grid", placeItems: "center", fontSize: "2.4rem", fontWeight: 800, color: "#2b1f1c", overflow: "hidden" }}>
+            {profile.icon_image_path ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.icon_image_path} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              profile.username?.[0]?.toUpperCase() ?? "?"
+            )}
           </div>
         </div>
         <h2 style={{ margin: "22px 0 0", fontSize: "1.8rem", fontWeight: 800 }}>{profile.username}</h2>

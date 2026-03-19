@@ -172,9 +172,15 @@ export default function ChatDetailPage() {
             fontWeight: 800,
             color: "#2b1f1c",
             flexShrink: 0,
+            overflow: "hidden",
           }}
         >
-          {otherInitial}
+          {conversation.other_user?.icon_image_path ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={conversation.other_user.icon_image_path} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            otherInitial
+          )}
         </div>
         <div>
           <h1 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>{otherName}</h1>
@@ -243,9 +249,15 @@ export default function ChatDetailPage() {
                     fontSize: "0.8rem",
                     fontWeight: 800,
                     flexShrink: 0,
+                    overflow: "hidden",
                   }}
                 >
-                  {msg.sender.username[0]?.toUpperCase() ?? "?"}
+                  {msg.sender.icon_image_path ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={msg.sender.icon_image_path} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    msg.sender.username[0]?.toUpperCase() ?? "?"
+                  )}
                 </div>
                 <div
                   style={{

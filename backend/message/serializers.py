@@ -23,6 +23,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
     project_id = serializers.UUIDField(read_only=True)
+    project_title = serializers.SerializerMethodField()
 
     class Meta:
         model = Chatroom
@@ -30,6 +31,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
             "id",
             "room_type",
             "project_id",
+            "project_title",
             "other_user",
             "last_message",
             "unread_count",
@@ -38,7 +40,6 @@ class ConversationListSerializer(serializers.ModelSerializer):
 
     def _get_members_info(self, obj):
         """prefetchキャッシュを1回走査して自分・相手のメンバー情報を返す。
-        PERSONAL_CHAT 専用。PROJECT_CHAT では other_member が不定になる点に注意。
         Returns (my_membership, other_member) タプル。
         """
         request = self.context.get("request")
@@ -54,8 +55,6 @@ class ConversationListSerializer(serializers.ModelSerializer):
         return my_membership, other_member
 
     def get_other_user(self, obj):
-        if obj.room_type != Chatroom.RoomType.PERSONAL_CHAT:
-            return None
         _, other = self._get_members_info(obj)
         if other is None:
             return None
@@ -65,6 +64,11 @@ class ConversationListSerializer(serializers.ModelSerializer):
             "username": user.username,
             "icon_image_path": user.icon_image_path,
         }
+
+    def get_project_title(self, obj):
+        if obj.room_type == Chatroom.RoomType.PROJECT_CHAT and obj.project:
+            return obj.project.title
+        return None
 
     def get_last_message(self, obj):
         # _annotate_conversations() で付加されたアノテーションを使用（N+1 なし）

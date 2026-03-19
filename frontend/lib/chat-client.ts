@@ -42,6 +42,7 @@ export type Conversation = {
   id: string; // UUID
   room_type: "PERSONAL_CHAT" | "PROJECT_CHAT";
   project_id: string | null;
+  project_title: string | null;
   other_user: ConversationOtherUser | null;
   last_message: ConversationLastMessage | null;
   unread_count: number;
@@ -115,4 +116,15 @@ export async function markRead(conversationId: string): Promise<void> {
 export async function fetchConversationById(id: string): Promise<Conversation | null> {
   const data = await fetchConversations();
   return data.results.find((c) => c.id === id) ?? null;
+}
+
+// 個人チャットを作成（既存の場合はそれを返す）
+export async function createConversation(userId: number): Promise<Conversation> {
+  const res = await fetch(`${BASE}/api/conversations/`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ user_id: userId }),
+  });
+  if (!res.ok) throw new Error("チャットの作成に失敗しました");
+  return res.json();
 }

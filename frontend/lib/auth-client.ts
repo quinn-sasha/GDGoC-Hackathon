@@ -1,3 +1,10 @@
+/** ストレージからアクセストークンを取得する共通関数 */
+export function getAuthToken(): string | null {
+  return typeof window !== "undefined"
+    ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
+    : null;
+}
+
 export type AuthApiResult = {
   ok: boolean;
   message: string;
