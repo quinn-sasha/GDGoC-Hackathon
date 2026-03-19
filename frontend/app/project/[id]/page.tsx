@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 import { buildProjectImage } from "@/lib/project-image";
-import { fetchProjectDetail, submitProjectApplication } from "@/lib/project-api";
+import { fetchProjectDetail, submitProjectApplication, fetchProjectApplications, type ProjectApplication } from "@/lib/project-api";
 import { fetchProfile } from "@/lib/profile-api";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
@@ -73,6 +73,7 @@ export default function ProjectDetailPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isAlreadyApplied, setIsAlreadyApplied] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
+  const [applications, setApplications] = useState<ProjectApplication[]>([]);
   const [isPC, setIsPC] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -102,6 +103,11 @@ export default function ProjectDetailPage() {
           if (data.chatroom_id) {
             setChatId(data.chatroom_id);
           }
+        }
+        if (data.is_owner) {
+          fetchProjectApplications(projectId)
+            .then((apps) => setApplications(apps))
+            .catch(() => {});
         }
       })
       .catch(() => {
@@ -225,19 +231,94 @@ export default function ProjectDetailPage() {
       </div>
 
       {isOwner && (
-        <div
-          style={{
-            marginTop: 16,
-            borderRadius: 16,
-            background: "rgba(100, 120, 255, 0.08)",
-            border: "1px solid rgba(100, 120, 255, 0.25)",
-            padding: "14px",
-          }}
-        >
-          <p style={{ margin: 0, color: "#a0b0ff", fontWeight: 700 }}>オーナーは応募できません</p>
-          <p style={{ margin: "8px 0 0", color: "#c7c7c7", fontSize: "0.86rem", lineHeight: 1.6 }}>
-            このプロジェクトはあなたが作成しました。
-          </p>
+        <div style={{ marginTop: 16 }}>
+          {applications.length === 0 ? (
+            <div
+              style={{
+                borderRadius: 16,
+                background: "rgba(100, 120, 255, 0.08)",
+                border: "1px solid rgba(100, 120, 255, 0.25)",
+                padding: "14px",
+              }}
+            >
+              <p style={{ margin: 0, color: "#a0b0ff", fontWeight: 700 }}>まだ応募はありません</p>
+              <p style={{ margin: "8px 0 0", color: "#c7c7c7", fontSize: "0.86rem", lineHeight: 1.6 }}>
+                応募が届いたらここに表示されます。
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p style={{ margin: "0 0 12px", color: "#8d8d8d", fontSize: "0.8rem" }}>
+                応募者 {applications.length}名
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {applications.map((app) => (
+                  <div
+                    key={app.id}
+                    style={{
+                      borderRadius: 16,
+                      border: "1px solid #2a2a2a",
+                      background: "#111111",
+                      padding: "14px",
+                    }}
+                  >
+                    {/* 応募者ヘッダー */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div
+                        style={{
+                          width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
+                          background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
+                          display: "grid", placeItems: "center",
+                          color: "#2b1f1c", fontWeight: 800, fontSize: "0.9rem",
+                        }}
+                      >
+                        {app.applicant_name?.[0]?.toUpperCase() ?? "?"}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>{app.applicant_name}</div>
+                        <div style={{ color: "#8d8d8d", fontSize: "0.76rem" }}>
+                          {new Date(app.created_at).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          marginLeft: "auto", flexShrink: 0,
+                          borderRadius: 999, padding: "4px 10px", fontSize: "0.73rem", fontWeight: 700,
+                          background: app.status === "accepted" ? "rgba(138,255,29,0.12)" : app.status === "rejected" ? "rgba(255,80,80,0.1)" : "rgba(255,200,50,0.1)",
+                          color: app.status === "accepted" ? "#8aff1d" : app.status === "rejected" ? "#ff8080" : "#ffc832",
+                          border: `1px solid ${app.status === "accepted" ? "rgba(138,255,29,0.3)" : app.status === "rejected" ? "rgba(255,80,80,0.3)" : "rgba(255,200,50,0.3)"}`,
+                        }}
+                      >
+                        {app.status === "accepted" ? "承認" : app.status === "rejected" ? "却下" : "申請中"}
+                      </span>
+                    </div>
+                    {/* 応募内容 */}
+                    <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      <span style={{ borderRadius: 999, background: "#1a1a2e", border: "1px solid #334", color: "#a0b0ff", padding: "4px 10px", fontSize: "0.76rem" }}>
+                        役割: {app.role}
+                      </span>
+                      <span style={{ borderRadius: 999, background: "#1a2a1a", border: "1px solid #343", color: "#80c080", padding: "4px 10px", fontSize: "0.76rem" }}>
+                        ペース: {app.availability}
+                      </span>
+                    </div>
+                    <p style={{ margin: "10px 0 0", color: "#cccccc", fontSize: "0.86rem", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                      {app.message}
+                    </p>
+                    {app.portfolio_url && (
+                      <a
+                        href={app.portfolio_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: "inline-block", marginTop: 8, color: "#6699ff", fontSize: "0.8rem", wordBreak: "break-all" }}
+                      >
+                        {app.portfolio_url}
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -58,6 +58,29 @@ export async function createProject(data: {
   return await response.json();
 }
 
+export type ProjectApplication = {
+  id: string;
+  applicant_id: number;
+  applicant_name: string;
+  applicant_icon: string;
+  role: string;
+  availability: string;
+  message: string;
+  portfolio_url: string;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
+};
+
+export async function fetchProjectApplications(projectId: string): Promise<ProjectApplication[]> {
+  const response = await fetch(`${baseUrl}/api/projects/${projectId}/applications/`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("応募者一覧の取得に失敗しました");
+  return await response.json();
+}
+
 export async function submitProjectApplication({
   projectId,
   role,

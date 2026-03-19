@@ -230,3 +230,26 @@ class ApplicationSerializer(serializers.ModelSerializer):
         model = Application
         fields = ["id", "role", "availability", "message", "portfolio_url", "status", "created_at"]
         read_only_fields = ["id", "status", "created_at"]
+
+
+class ApplicationDetailSerializer(serializers.ModelSerializer):
+    """オーナー向け: 応募者情報つきの応募詳細シリアライザー"""
+    applicant_id = serializers.IntegerField(source="applicant.id", read_only=True)
+    applicant_name = serializers.CharField(source="applicant.username", read_only=True)
+    applicant_icon = serializers.CharField(source="applicant.icon_image_path", read_only=True)
+
+    class Meta:
+        model = Application
+        fields = [
+            "id",
+            "applicant_id",
+            "applicant_name",
+            "applicant_icon",
+            "role",
+            "availability",
+            "message",
+            "portfolio_url",
+            "status",
+            "created_at",
+        ]
+        read_only_fields = fields

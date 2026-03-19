@@ -11,6 +11,7 @@ from .serializers import (
     ProjectDetailSerializer,
     ProjectWriteSerializer,
     ApplicationSerializer,
+    ApplicationDetailSerializer,
 )
 
 # ==========================================
@@ -134,6 +135,36 @@ class ProjectViewSet(viewsets.ModelViewSet):
             {**serializer.data, "chatroom_id": str(chatroom_id)},
             status=status.HTTP_201_CREATED,
         )
+
+    @extend_schema(
+        summary="応募者一覧取得（オーナーのみ）",
+        description="プロジェクトオーナーのみが応募者の詳細一覧を取得できます。",
+        responses={
+            200: ApplicationDetailSerializer(many=True),
+            403: OpenApiResponse(description="オーナー以外はアクセス不可"),
+        },
+    )
+    @action(
+        detail=True, methods=["get"], permission_classes=[permissions.IsAuthenticated]
+    )
+    def applications(self, request, pk=None):
+        """
+        応募者一覧取得（オーナー専用）
+        GET /api/projects/{id}/applications/
+        """
+        project = self.get_object()
+        if project.owner != request.user:
+            return Response(
+                {"detail": "このプロジェクトのオーナーのみアクセスできます。"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        apps = (
+            Application.objects.filter(project=project)
+            .select_related("applicant")
+            .order_by("created_at")
+        )
+        serializer = ApplicationDetailSerializer(apps, many=True)
+        return Response(serializer.data)
 
     @extend_schema(
         summary="お気に入り登録・解除",
