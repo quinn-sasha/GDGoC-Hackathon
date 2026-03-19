@@ -5,7 +5,7 @@ import { CommonSearchBar } from "@/components/CommonSearchBar";
 import { CommonCategoryTabs } from "@/components/CommonCategoryTabs";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
-import { fetchHomeFeed } from "@/lib/home-client";
+import { fetchHomeFeed, type HomeFeedUpdate, type HomeFeedFeatured } from "@/lib/home-client";
 import { fetchProfileAll } from "@/lib/profile-extra-api";
 import { buildProjectImage } from "@/lib/project-image";
 import { HOME_CATEGORIES } from "@/lib/mock-data";
@@ -62,8 +62,8 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [activeCat, setActiveCat] = useState(HOME_CATEGORIES[0] ?? "すべて");
   const [categories, setCategories] = useState<string[]>(HOME_CATEGORIES);
-  const [featured, setFeatured] = useState<any>(null);
-  const [updates, setUpdates] = useState<any[]>([]);
+  const [featured, setFeatured] = useState<HomeFeedFeatured | null>(null);
+  const [updates, setUpdates] = useState<HomeFeedUpdate[]>([]);
   const [profileProjects, setProfileProjects] = useState<any[]>([]);
   const [fetchError, setFetchError] = useState("");
   const [showAllUpdates, setShowAllUpdates] = useState(false);
@@ -198,7 +198,7 @@ export default function HomePage() {
     }
   };
 
-  const handleOpenProjectDetail = (projectId: number) => {
+  const handleOpenProjectDetail = (projectId: string | number) => {
     router.push(`/project/${projectId}`);
   };
 

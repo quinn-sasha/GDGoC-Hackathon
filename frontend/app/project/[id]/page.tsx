@@ -3,31 +3,38 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
-import { PROFILE_SKILLS, PROFILE_SUMMARY } from "@/lib/mock-data";
-import { createApplicationChatThread } from "@/lib/chat-storage";
 import { buildProjectImage } from "@/lib/project-image";
 import { fetchProjectDetail, submitProjectApplication } from "@/lib/project-api";
+import { fetchProfile } from "@/lib/profile-api";
 
 const STATUS_LABELS: Record<string, string> = {
-  ONGOING: "進行中",
-  FEATURED: "注目",
-  "IN REVIEW": "レビュー中",
-  COMPLETED: "完了",
-  DRAFT: "下書き",
+  opening: "開始前",
+  ongoing: "進行中",
+  completed: "完了",
+};
+
+const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
+  opening: { bg: "#1a1a2e", color: "#6699ff" },
+  ongoing: { bg: "#0d2e22", color: "#4fc3a1" },
+  completed: { bg: "#2a1a1a", color: "#cc9944" },
 };
 
 function translateStatus(status: string) {
   return STATUS_LABELS[status] ?? status;
 }
 
-function toDisplayName(author: string) {
-  return author
-    .split(" ")
-    .filter(Boolean)
-    .map((word) => word[0] + word.slice(1).toLowerCase())
-    .join(" ");
+function formatRelativeTime(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "今";
+  if (min < 60) return `${min}分前`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}時間前`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}日前`;
+  return new Date(isoString).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
 }
 
 const ROLE_OPTIONS: Record<string, string[]> = {
@@ -47,20 +54,20 @@ function getRoleOptions(category: string) {
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const projectId = Number(params.id);
+  const projectId = params.id;
 
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [roleOptions, setRoleOptions] = useState<string[]>([]);
   const [selectedRole, setSelectedRole] = useState("");
   const [availability, setAvailability] = useState(AVAILABILITY_OPTIONS[0]);
-  const [message, setMessage] = useState(`はじめまして。${PROFILE_SUMMARY.name}です。プロジェクト内容に興味があり、まずは話を聞いてみたいです。`);
+  const [message, setMessage] = useState("はじめまして。プロジェクト内容に興味があり、まずは話を聞いてみたいです。");
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [createdChatId, setCreatedChatId] = useState<number | null>(null);
 
   // プロジェクト詳細取得
   useEffect(() => {
@@ -71,8 +78,9 @@ export default function ProjectDetailPage() {
       .then((data) => {
         if (!isMounted) return;
         setProject(data);
-        setRoleOptions(getRoleOptions(data.category ?? ""));
-        setSelectedRole(getRoleOptions(data.category ?? "")[0] ?? "");
+        const cat = data.categories?.[0]?.name ?? "";
+        setRoleOptions(getRoleOptions(cat));
+        setSelectedRole(getRoleOptions(cat)[0] ?? "");
       })
       .catch(() => {
         if (!isMounted) return;
@@ -84,6 +92,16 @@ export default function ProjectDetailPage() {
       });
     return () => { isMounted = false; };
   }, [projectId]);
+
+  // 自分のプロフィール取得（応募フォームの表示用）
+  useEffect(() => {
+    fetchProfile()
+      .then((data) => {
+        setUserProfile(data);
+        setMessage(`はじめまして。${data.username}です。プロジェクト内容に興味があり、まずは話を聞いてみたいです。`);
+      })
+      .catch(() => { /* ignore */ });
+  }, []);
 
   if (loading) {
     return <main style={{ minHeight: "100vh", maxWidth: 480, margin: "0 auto", background: "#111111", color: "#ffffff", fontFamily: "'Segoe UI', sans-serif", padding: "24px 20px 96px" }}>読み込み中...</main>;
@@ -100,6 +118,12 @@ export default function ProjectDetailPage() {
       </main>
     );
   }
+
+  const authorName = project.owner_name ?? "不明";
+  const avatarInitial = authorName[0]?.toUpperCase() ?? "?";
+  const category = project.categories?.[0]?.name ?? "";
+  const statusStyle = STATUS_STYLE[project.progress_status] ?? { bg: "#1a1a1a", color: "#888888" };
+  const timeStr = formatRelativeTime(project.updated_at);
 
   const messageLength = message.trim().length;
   const canSubmit = selectedRole !== "" && availability !== "" && messageLength >= 20 && !isSubmitting;
@@ -119,15 +143,6 @@ export default function ProjectDetailPage() {
         message: message.trim(),
         portfolioUrl: portfolioUrl.trim(),
       });
-      const createdChatThread = createApplicationChatThread({
-        projectId: project.id,
-        projectTitle: project.title,
-        hostName: toDisplayName(project.author),
-        hostInitial: project.avatarInitial,
-        role: selectedRole,
-        openingMessage: message.trim(),
-      });
-      setCreatedChatId(createdChatThread.id);
       setIsSubmitted(true);
     } catch {
       setSubmitError("応募内容の送信に失敗しました。時間をおいて再度お試しください。");
@@ -160,13 +175,7 @@ export default function ProjectDetailPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          style={{
-            border: "none",
-            background: "none",
-            color: "#ffffff",
-            fontSize: "0.92rem",
-            cursor: "pointer",
-          }}
+          style={{ border: "none", background: "none", color: "#ffffff", fontSize: "0.92rem", cursor: "pointer" }}
         >
           戻る
         </button>
@@ -199,23 +208,23 @@ export default function ProjectDetailPage() {
               flexShrink: 0,
             }}
           >
-            {project.avatarInitial}
+            {avatarInitial}
           </div>
 
           <div style={{ minWidth: 0 }}>
             <h1 style={{ margin: 0, fontSize: "1.25rem", lineHeight: 1.35 }}>{project.title}</h1>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, color: "#9f9f9f", fontSize: "0.8rem" }}>
-              <span>ホスト: {toDisplayName(project.author)}</span>
-              <span>カテゴリ: {project.category}</span>
+              <span>ホスト: {authorName}</span>
+              {category && <span>カテゴリ: {category}</span>}
             </div>
           </div>
 
           <span
             style={{
               borderRadius: 999,
-              background: project.statusBg,
-              color: project.statusColor,
-              border: `1px solid ${project.statusBg}`,
+              background: statusStyle.bg,
+              color: statusStyle.color,
+              border: `1px solid ${statusStyle.bg}`,
               padding: "5px 10px",
               fontSize: "0.72rem",
               fontWeight: 700,
@@ -223,13 +232,13 @@ export default function ProjectDetailPage() {
               whiteSpace: "nowrap",
             }}
           >
-            {translateStatus(project.status)}
+            {translateStatus(project.progress_status)}
           </span>
         </div>
 
         <div style={{ marginTop: 18 }}>
           <Image
-            src={buildProjectImage(project.title, project.category)}
+            src={buildProjectImage(project.title, category)}
             alt={`${project.title} のイメージ`}
             width={1200}
             height={720}
@@ -245,16 +254,38 @@ export default function ProjectDetailPage() {
           />
         </div>
 
-        <p style={{ margin: "18px 0 0", color: "#cccccc", lineHeight: 1.8, fontSize: "0.96rem" }}>
-          {project.description}
-        </p>
+        {project.description && (
+          <p style={{ margin: "18px 0 0", color: "#cccccc", lineHeight: 1.8, fontSize: "0.96rem" }}>
+            {project.description}
+          </p>
+        )}
+
+        {project.technologies && project.technologies.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
+            {project.technologies.map((tech: { id: number; name: string }) => (
+              <span
+                key={tech.id}
+                style={{
+                  background: "#152413",
+                  border: "1px solid #7dff2b",
+                  borderRadius: 99,
+                  padding: "4px 10px",
+                  fontSize: "0.78rem",
+                  color: "#7dff2b",
+                  fontWeight: 700,
+                }}
+              >
+                {tech.name}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 18, color: "#888888", fontSize: "0.82rem" }}>
-          <span>{toDisplayName(project.author)}</span>
+          <span>{authorName}</span>
+          {category && <><span>・</span><span>{category}</span></>}
           <span>・</span>
-          <span>{project.category}</span>
-          <span>・</span>
-          <span>{project.time}</span>
+          <span>{timeStr}</span>
         </div>
 
         <section
@@ -285,55 +316,60 @@ export default function ProjectDetailPage() {
             </span>
           </div>
 
-          <div
-            style={{
-              marginTop: 16,
-              display: "grid",
-              gridTemplateColumns: "44px minmax(0, 1fr)",
-              gap: 12,
-              alignItems: "center",
-              padding: "12px",
-              background: "#111111",
-              borderRadius: 16,
-              border: "1px solid #242424",
-            }}
-          >
+          {userProfile && (
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #f9a8a8 0%, #d47fa6 100%)",
+                marginTop: 16,
                 display: "grid",
-                placeItems: "center",
-                color: "#ffffff",
-                fontWeight: 800,
+                gridTemplateColumns: "44px minmax(0, 1fr)",
+                gap: 12,
+                alignItems: "center",
+                padding: "12px",
+                background: "#111111",
+                borderRadius: 16,
+                border: "1px solid #242424",
               }}
             >
-              {PROFILE_SUMMARY.avatarInitial}
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: "0.94rem", fontWeight: 700 }}>{PROFILE_SUMMARY.name}</div>
-              <div style={{ color: "#8d8d8d", fontSize: "0.8rem", marginTop: 4 }}>{PROFILE_SUMMARY.handle}</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-                {PROFILE_SKILLS.filter((skill) => skill !== "+").slice(0, 4).map((skill) => (
-                  <span
-                    key={skill}
-                    style={{
-                      borderRadius: 999,
-                      padding: "5px 9px",
-                      background: "#1f1f1f",
-                      border: "1px solid #2d2d2d",
-                      color: "#d8d8d8",
-                      fontSize: "0.74rem",
-                    }}
-                  >
-                    {skill}
-                  </span>
-                ))}
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
+                  display: "grid",
+                  placeItems: "center",
+                  color: "#2b1f1c",
+                  fontWeight: 800,
+                  fontSize: "1.1rem",
+                }}
+              >
+                {userProfile.username?.[0]?.toUpperCase() ?? "?"}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: "0.94rem", fontWeight: 700 }}>{userProfile.username}</div>
+                <div style={{ color: "#8d8d8d", fontSize: "0.8rem", marginTop: 4 }}>@{userProfile.username}</div>
+                {userProfile.skills && userProfile.skills.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                    {userProfile.skills.slice(0, 4).map((skill: { id: number; name: string }) => (
+                      <span
+                        key={skill.id}
+                        style={{
+                          borderRadius: 999,
+                          padding: "5px 9px",
+                          background: "#1f1f1f",
+                          border: "1px solid #2d2d2d",
+                          color: "#d8d8d8",
+                          fontSize: "0.74rem",
+                        }}
+                      >
+                        {skill.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
 
           <div style={{ marginTop: 18 }}>
             <label style={{ display: "block", color: "#8d8d8d", fontSize: "0.8rem", marginBottom: 10 }}>応募したい役割</label>
@@ -454,7 +490,7 @@ export default function ProjectDetailPage() {
             >
               <p style={{ margin: 0, color: "#dfffbd", fontWeight: 700 }}>応募内容を送信しました</p>
               <p style={{ margin: "8px 0 0", color: "#c7c7c7", fontSize: "0.86rem", lineHeight: 1.6 }}>
-                応募内容に対応するチャットを自動生成しました。このままホストとのやり取りを始められます。
+                ホストからの返信をお待ちください。
               </p>
             </div>
           ) : null}
@@ -479,7 +515,7 @@ export default function ProjectDetailPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <button
               type="button"
-              onClick={() => router.push(createdChatId ? `/chat/${createdChatId}` : "/chat")}
+              onClick={() => router.push("/chat")}
               style={{
                 borderRadius: 14,
                 border: "1px solid #353535",
@@ -527,7 +563,7 @@ export default function ProjectDetailPage() {
               boxShadow: "0 12px 24px rgba(0, 0, 0, 0.35)",
             }}
           >
-            {isSubmitting ? "応募を送信中..." : `この内容で応募する`}
+            {isSubmitting ? "応募を送信中..." : "この内容で応募する"}
           </button>
         )}
       </div>

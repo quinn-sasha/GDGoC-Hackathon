@@ -6,16 +6,16 @@ import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
 import { HOME_CATEGORIES } from "@/lib/mock-data";
 import { isMobileUA } from "@/lib/device";
+import { createProject } from "@/lib/project-api";
 
 function isAllCategory(category: string) {
   return category === "All" || category === "すべて";
 }
 
 const STATUS_OPTIONS = [
-  { value: "ONGOING", label: "進行中" },
-  { value: "FEATURED", label: "注目" },
-  { value: "IN REVIEW", label: "レビュー中" },
-  { value: "DRAFT", label: "下書き" },
+  { value: "opening", label: "開始前" },
+  { value: "ongoing", label: "進行中" },
+  { value: "completed", label: "完了" },
 ];
 
 const PRESET_SKILLS = [
@@ -127,25 +127,16 @@ export default function ProjectRecruitPage() {
 
     setIsSubmitting(true);
 
-    const payload = {
-      title: trimmedTitle,
-      description: trimmedDescription,
-      skills,
-      category,
-      status,
-      image: projectImage,
-      imageName: projectImageName,
-      createdAt: new Date().toISOString(),
-    };
-
     try {
-      const raw = localStorage.getItem("projectRecruitDrafts");
-      const previous = raw ? (JSON.parse(raw) as unknown[]) : [];
-      const next = [payload, ...previous].slice(0, 30);
-      localStorage.setItem("projectRecruitDrafts", JSON.stringify(next));
+      await createProject({
+        title: trimmedTitle,
+        description: trimmedDescription,
+        progress_status: status,
+        technologies: skills.map((s) => s.toLowerCase()),
+      });
       router.push("/home");
     } catch {
-      setFormError("保存に失敗しました。もう一度お試しください。");
+      setFormError("プロジェクトの作成に失敗しました。もう一度お試しください。");
     } finally {
       setIsSubmitting(false);
     }

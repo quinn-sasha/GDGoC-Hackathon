@@ -1,19 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PROFILE_SUMMARY, PROFILE_SKILLS } from "@/lib/mock-data";
-import { updateProfile } from "@/lib/profile-api";
+import { updateProfile, fetchProfile } from "@/lib/profile-api";
 
 export default function ProfileEditPage() {
   const router = useRouter();
 
-  const [name, setName] = useState(PROFILE_SUMMARY.name);
-  const [handle, setHandle] = useState(PROFILE_SUMMARY.handle);
-  const [bio, setBio] = useState(PROFILE_SUMMARY.bio);
+  const [name, setName] = useState("");
+  const [handle, setHandle] = useState("");
+  const [bio, setBio] = useState("");
   const [githubUrl, setGithubUrl] = useState("");
   const [portfolioUrl, setPortfolioUrl] = useState("");
-  const [skills, setSkills] = useState<string[]>(PROFILE_SKILLS.filter((s) => s !== "+"));
+  const [skills, setSkills] = useState<string[]>([]);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [avatarInitial, setAvatarInitial] = useState("?");
+
+  useEffect(() => {
+    fetchProfile()
+      .then((data) => {
+        setName(data.username ?? "");
+        setHandle(data.username ?? "");
+        setBio(data.profile_bio ?? "");
+        setGithubUrl(data.github_url ?? "");
+        setSkills((data.skills ?? []).map((s: { id: number; name: string }) => s.name));
+        setAvatarInitial((data.username?.[0] ?? "?").toUpperCase());
+      })
+      .catch(() => { /* ignore, use empty defaults */ })
+      .finally(() => setProfileLoading(false));
+  }, []);
   const [showPicker, setShowPicker] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -120,7 +135,7 @@ export default function ProfileEditPage() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={avatarPreview} alt="avatar" style={{ width: 100, height: 100, borderRadius: "50%", objectFit: "cover" }} />
           ) : (
-            PROFILE_SUMMARY.avatarInitial
+            avatarInitial
           )}
           <div
             onClick={() => setShowUpload(true)}
@@ -412,9 +427,13 @@ export default function ProfileEditPage() {
           onClick={async () => {
             if (!canSave) return;
             try {
-              await updateProfile({ name, handle, bio });
+              await updateProfile({
+                username: name,
+                profile_bio: bio,
+                github_url: githubUrl,
+              });
               router.back();
-            } catch (e) {
+            } catch {
               alert("プロフィール更新に失敗しました");
             }
           }}
