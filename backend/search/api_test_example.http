@@ -1,0 +1,135 @@
+# 変数の定義
+@host = http://localhost:8000
+@test_email = search_test@example.com
+@test_password = YourSecurePassword123!
+
+### 1. ユーザー登録（検索用ユーザー）
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+    "email": "{{test_email}}",
+    "username": "search_tester",
+    "password": "{{test_password}}"
+}
+
+### 2. メールアドレス確認（※ターミナルを見て手動でコピペ！）
+POST {{host}}/api/auth/verify-email
+Content-Type: application/json
+
+{
+    "token": "ここにターミナルのトークンを貼り付ける"
+}
+
+### 3. ログイン
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "{{test_email}}",
+    "password": "{{test_password}}"
+}
+> {%
+    client.global.set("auth_token", response.body.access);
+    client.log("Login & Token saved: " + client.global.get("auth_token"));
+%}
+
+### ==========================================
+### テストデータの作成
+### ==========================================
+
+### 4. テスト用プロジェクトA作成 (Python / AI / Web)
+POST {{host}}/api/projects/
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "title": "AIチャットボット開発",
+    "description": "Pythonを使った最新のAIチャットボットをWeb上で動かします。",
+    "technologies": ["python", "ai"],
+    "categories": ["web-mobile", "data-ai"],
+    "progress_status": "opening"
+}
+
+### 5. テスト用プロジェクトB作成 (React / Web)
+POST {{host}}/api/projects/
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "title": "Reactポートフォリオサイト",
+    "description": "モダンなフロントエンド技術を用いたポートフォリオ作成プロジェクトです。",
+    "technologies": ["react", "javascript"],
+    "categories": ["web-mobile"],
+    "progress_status": "ongoing"
+}
+
+### 6. テスト用プロジェクトC作成 (Python / Data)
+POST {{host}}/api/projects/
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "title": "Pythonデータ分析ダッシュボード",
+    "description": "データセットを解析して可視化するツールを作ります。",
+    "technologies": ["python", "pandas"],
+    "categories": ["data-ai"],
+    "progress_status": "completed"
+}
+
+### ==========================================
+### 検索機能のテスト
+### ==========================================
+
+### 7. キーワード検索（部分一致の検証）
+# 期待: タイトルと概要に「Python」を含む プロジェクトA と プロジェクトC がヒットする
+GET {{host}}/api/search/?keyword=Python
+Authorization: Bearer {{auth_token}}
+
+### 8. カテゴリー検索（単一指定）
+# 期待: カテゴリーに「web-mobile」を持つ プロジェクトA と プロジェクトB がヒットする
+GET {{host}}/api/search/?category=web-mobile
+Authorization: Bearer {{auth_token}}
+
+### 9. カテゴリー検索（複数指定・OR検索の検証）
+# 期待: 「data-ai」または「systems-core」を持つ プロジェクトA と プロジェクトC がヒットする
+GET {{host}}/api/search/?category=data-ai,systems-core
+Authorization: Bearer {{auth_token}}
+
+### 10. 技術タグ検索（単一指定）
+# 期待: 「python」を持つ プロジェクトA と プロジェクトC がヒットする
+GET {{host}}/api/search/?technology=python
+Authorization: Bearer {{auth_token}}
+
+### 11. 技術タグ検索（複数指定・OR検索の検証）
+# 期待: 「react」または「pandas」を持つ プロジェクトB と プロジェクトC がヒットする
+GET {{host}}/api/search/?technology=react,pandas
+Authorization: Bearer {{auth_token}}
+
+### 12. ステータス検索（完全一致の検証）
+# 期待: ステータスが「opening」である プロジェクトA のみがヒットする
+GET {{host}}/api/search/?status=opening
+Authorization: Bearer {{auth_token}}
+
+### 13. 複合検索（複数パラメータ・AND検索の検証）
+# 期待:
+# keyword=Python (A, C)
+# AND
+# status=opening (A)
+# 結果: すべての条件を満たす プロジェクトA のみがヒットする
+GET {{host}}/api/search/?keyword=Python&status=opening
+Authorization: Bearer {{auth_token}}
+
+### 14. 複合検索（ORとANDの組み合わせ検証）
+# 期待:
+# category=web-mobile (A, B)
+# AND
+# technology=ai,javascript (A, B)
+# 結果: プロジェクトA と プロジェクトB がヒットする
+GET {{host}}/api/search/?category=web-mobile&technology=ai,javascript
+Authorization: Bearer {{auth_token}}
+
+### 15. 該当なしの検証
+# 期待: 条件に一致するものがないため、results が空配列 [] になる
+GET {{host}}/api/search/?keyword=Ruby
+Authorization: Bearer {{auth_token}}
