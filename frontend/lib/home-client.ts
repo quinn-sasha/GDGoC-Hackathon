@@ -1,28 +1,140 @@
-import type { HomeFeatured, HomeUpdate } from "@/lib/mock-data";
+const BASE =
+  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
 
-export type HomeFeedResponse = {
-  categories: string[];
-  featured: HomeFeatured;
-  updates: HomeUpdate[];
-};
-
-export async function fetchHomeFeed(): Promise<HomeFeedResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
+function getAuthHeaders(): Record<string, string> {
   const token =
     typeof window !== "undefined"
       ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
       : null;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const response = await fetch(`${baseUrl}/api/home`, {
-    method: "GET",
-    headers,
+  return headers;
+}
+
+function formatRelativeTime(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "今";
+  if (min < 60) return `${min}分前`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}時間前`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}日前`;
+  return new Date(isoString).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
+}
+
+type StatusStyle = { statusColor: string; statusBg: string; label: string };
+const STATUS_STYLE_MAP: Record<string, StatusStyle> = {
+  opening: { statusColor: "#6699ff", statusBg: "#1a1a2e", label: "開始前" },
+  ongoing: { statusColor: "#4fc3a1", statusBg: "#0d2e22", label: "進行中" },
+  completed: { statusColor: "#cc9944", statusBg: "#2a1a1a", label: "完了" },
+};
+function getStatusStyle(status: string): StatusStyle {
+  return STATUS_STYLE_MAP[status] ?? { statusColor: "#888888", statusBg: "#1a1a1a", label: status };
+}
+
+export type HomeFeedUpdate = {
+  id: string | number;
+  title: string;
+  status: string;
+  statusColor: string;
+  statusBg: string;
+  time: string;
+  description: string;
+  author: string;
+  category: string;
+  categoryTag: string;
+  avatarInitial: string;
+};
+
+export type HomeFeedFeatured = {
+  id: string | number;
+  badge: string;
+  label: string;
+  readTime: string;
+  title: string;
+  description: string;
+  hostInitial: string;
+  hostName: string;
+  category: string;
+  statusColor: string;
+  statusBg: string;
+  time: string;
+};
+
+export type HomeFeedResponse = {
+  categories: string[];
+  featured: HomeFeedFeatured | null;
+  updates: HomeFeedUpdate[];
+};
+
+export async function fetchHomeFeed(): Promise<HomeFeedResponse> {
+  const res = await fetch(`${BASE}/api/projects/`, {
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
+  if (!res.ok) throw new Error("プロジェクト一覧の取得に失敗しました");
+  const data = await res.json();
+  // Django REST Framework のリスト API はページネーション付き { results: [] } または配列
+  const list: any[] = Array.isArray(data) ? data : (data.results ?? []);
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch home feed.");
+  if (list.length === 0) {
+    return { categories: ["すべて"], featured: null, updates: [] };
   }
 
-  return (await response.json()) as HomeFeedResponse;
+  const updates: HomeFeedUpdate[] = list.map((p: any) => {
+    const style = getStatusStyle(p.progress_status ?? "");
+    const category =
+      Array.isArray(p.categories) && p.categories.length > 0 ? String(p.categories[0]) : "";
+    const techDesc = Array.isArray(p.technologies) ? p.technologies.join(" / ") : "";
+    return {
+      id: p.id,
+      title: p.title ?? "",
+      status: style.label,
+      statusColor: style.statusColor,
+      statusBg: style.statusBg,
+      time: formatRelativeTime(p.updated_at),
+      description: techDesc,
+      author: p.owner_name ?? "",
+      category,
+      categoryTag: category,
+      avatarInitial: (p.owner_name?.[0] ?? "?").toUpperCase(),
+    };
+  });
+
+  const first = list[0];
+  const firstStyle = getStatusStyle(first.progress_status ?? "");
+  const firstCategory =
+    Array.isArray(first.categories) && first.categories.length > 0
+      ? String(first.categories[0])
+      : "";
+  const featured: HomeFeedFeatured = {
+    id: first.id,
+    badge: firstStyle.label,
+    label: "注目",
+    readTime: formatRelativeTime(first.updated_at),
+    title: first.title ?? "",
+    description: Array.isArray(first.technologies) ? first.technologies.join(" / ") : "",
+    hostInitial: (first.owner_name?.[0] ?? "?").toUpperCase(),
+    hostName: first.owner_name ?? "",
+    category: firstCategory,
+    statusColor: firstStyle.statusColor,
+    statusBg: firstStyle.statusBg,
+    time: formatRelativeTime(first.updated_at),
+  };
+
+  const categoriesSet = new Set<string>(["すべて"]);
+  for (const p of list) {
+    if (Array.isArray(p.categories)) {
+      for (const cat of p.categories) {
+        if (cat) categoriesSet.add(String(cat));
+      }
+    }
+  }
+
+  return {
+    categories: Array.from(categoriesSet),
+    featured,
+    updates,
+  };
 }
