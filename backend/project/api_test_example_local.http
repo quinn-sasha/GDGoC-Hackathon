@@ -1,6 +1,6 @@
 # 変数の定義
 @host = http://localhost:8000
-@test_email = osarinu@example.com
+@test_email = example@example.com
 @test_password = YourSecurePassword123!
 
 ### 1. ユーザー登録
