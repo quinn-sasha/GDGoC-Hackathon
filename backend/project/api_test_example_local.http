@@ -69,10 +69,6 @@ Content-Type: application/json
     client.log("Project 2 Created: " + client.global.get("project2_id"));
 %}
 
-### ==========================================
-### ▼ ここから推薦機能のテスト ▼
-### ==========================================
-
 ### 6-1. 推薦フィード取得 (未ログイン状態)
 # 期待する結果：スキルマッチは機能せず、単純な「新着順（Project2 -> Project1）」で返るはず
 GET {{host}}/api/projects/
@@ -110,11 +106,6 @@ Content-Type: application/json
 # 2番目: Project1 (人気枠 - 保存されたためスコアが上がっている)
 GET {{host}}/api/projects/
 Authorization: Bearer {{auth_token}}
-
-
-### ==========================================
-### ▲ ここまで推薦機能のテスト ▲
-### ==========================================
 
 ### 9. Get a Project Detail
 GET {{host}}/api/projects/{{project1_id}}/
