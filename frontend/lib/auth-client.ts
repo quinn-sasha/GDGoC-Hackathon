@@ -1,6 +1,8 @@
 export type AuthApiResult = {
   ok: boolean;
   message: string;
+  access?: string;
+  refresh?: string;
 };
 
 type ApiErrorBody = {
@@ -60,9 +62,19 @@ async function postJson<TPayload>(
   const data = (await response.json().catch(() => null)) as ApiErrorBody | null;
   const message = extractMessage(data);
 
+  // JWTトークンが返ってきた場合はlocalStorageに保存
+  if (response.ok && data && typeof data.access === "string" && typeof window !== "undefined") {
+    localStorage.setItem("access_token", data.access);
+    if (typeof data.refresh === "string") {
+      localStorage.setItem("refresh_token", data.refresh);
+    }
+  }
+
   return {
     ok: response.ok && (data?.ok ?? true),
     message,
+    access: data?.access as string | undefined,
+    refresh: data?.refresh as string | undefined,
   };
 }
 

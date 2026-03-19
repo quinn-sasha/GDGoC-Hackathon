@@ -8,11 +8,15 @@ export type HomeFeedResponse = {
 
 export async function fetchHomeFeed(): Promise<HomeFeedResponse> {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
+  const token =
+    typeof window !== "undefined"
+      ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
+      : null;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const response = await fetch(`${baseUrl}/api/home`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     cache: "no-store",
   });
 
