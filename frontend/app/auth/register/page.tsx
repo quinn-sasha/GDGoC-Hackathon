@@ -55,7 +55,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="login-shell">
+    <main className="login-shell auth-dark">
       <section className="login-card" aria-labelledby="register-title">
         <p className="login-kicker">アカウント作成</p>
         <h1 id="register-title">メールアドレスで登録</h1>

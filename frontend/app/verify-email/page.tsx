@@ -61,7 +61,7 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <main className="login-shell">
+    <main className="login-shell auth-dark">
       <section className="login-card" aria-labelledby="verify-title">
         <p className="login-kicker">メール認証</p>
         <h1 id="verify-title">メールアドレスを認証する</h1>
