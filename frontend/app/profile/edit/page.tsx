@@ -89,9 +89,13 @@ export default function ProfileEditPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      // アイコン画像が選択されていればアップロード
+      // アイコン画像が選択されていればアップロード（失敗しても他の更新は続行）
       if (avatarFile) {
-        await uploadProfileIcon(avatarFile);
+        try {
+          await uploadProfileIcon(avatarFile);
+        } catch {
+          // 画像アップロード失敗はサイレントに無視
+        }
       }
       await updateProfile({
         username: name,
