@@ -19,18 +19,26 @@ const STATUS_OPTIONS = [
 ];
 
 const PRESET_SKILLS = [
-  "React",
-  "TypeScript",
-  "Node.js",
-  "Python",
-  "Django",
-  "Figma",
-  "Flutter",
-  "Firebase",
-  "AWS",
-  "UI/UX",
-  "動画編集",
-  "データ分析",
+  "react",
+  "typescript",
+  "node.js",
+  "python",
+  "django",
+  "figma",
+  "flutter",
+  "firebase",
+  "aws",
+  "next.js",
+  "go",
+  "docker",
+  "postgresql",
+  "supabase",
+  "tailwindcss",
+  "graphql",
+  "unity",
+  "blender",
+  "tensorflow",
+  "pytorch",
 ];
 
 const MAX_IMAGE_SIZE_MB = 5;
@@ -128,15 +136,19 @@ export default function ProjectRecruitPage() {
     setIsSubmitting(true);
 
     try {
+      // バックエンドは英数字と . + # - スペースのみ許可
+      const validTechs = skills
+        .map((s) => s.toLowerCase().trim())
+        .filter((s) => /^[a-z0-9\s.+#-]+$/.test(s));
       await createProject({
         title: trimmedTitle,
         description: trimmedDescription,
         progress_status: status,
-        technologies: skills.map((s) => s.toLowerCase()),
+        technologies: validTechs,
       });
       router.push("/home");
-    } catch {
-      setFormError("プロジェクトの作成に失敗しました。もう一度お試しください。");
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "プロジェクトの作成に失敗しました。");
     } finally {
       setIsSubmitting(false);
     }

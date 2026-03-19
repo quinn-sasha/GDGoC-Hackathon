@@ -43,7 +43,17 @@ export async function createProject(data: {
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
-  if (!response.ok) throw new Error("プロジェクトの作成に失敗しました");
+  if (!response.ok) {
+    let detail = "プロジェクトの作成に失敗しました";
+    try {
+      const err = await response.json();
+      if (err.detail) detail = String(err.detail);
+      else if (err.technologies) detail = `スキルエラー: ${JSON.stringify(err.technologies)}`;
+      else if (err.title) detail = `タイトルエラー: ${JSON.stringify(err.title)}`;
+      else detail = JSON.stringify(err);
+    } catch { /* ignore */ }
+    throw new Error(detail);
+  }
   return await response.json();
 }
 
