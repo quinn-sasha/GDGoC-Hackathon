@@ -1,10 +1,19 @@
-// プロフィール取得
-export async function fetchProfile() {
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
+
+// 型定義（既存のProfileSummaryを利用）
+import type { ProfileSummary } from "@/lib/mock-data";
+
+function getAuthHeaders(): Record<string, string> {
   const token = typeof window !== "undefined" ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token")) : null;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
 
-  const res = await fetch("/api/profile/me/", {
+// プロフィール取得
+export async function fetchProfile() {
+  const headers = getAuthHeaders();
+  const res = await fetch(`${baseUrl}/api/profile/me/`, {
     method: "GET",
     headers,
     credentials: "include",
@@ -15,11 +24,8 @@ export async function fetchProfile() {
 
 // プロフィール更新
 export async function updateProfile(data: Partial<ProfileSummary>) {
-  const token = typeof window !== "undefined" ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token")) : null;
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-
-  const res = await fetch("/api/profile/me/", {
+  const headers = getAuthHeaders();
+  const res = await fetch(`${baseUrl}/api/profile/me/`, {
     method: "PATCH",
     headers,
     credentials: "include",
@@ -28,6 +34,3 @@ export async function updateProfile(data: Partial<ProfileSummary>) {
   if (!res.ok) throw new Error("プロフィール更新に失敗しました");
   return res.json();
 }
-
-// 型定義（既存のProfileSummaryを利用）
-import type { ProfileSummary } from "@/lib/mock-data";
