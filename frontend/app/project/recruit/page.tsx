@@ -43,7 +43,7 @@ const PRESET_SKILLS = [
 
 const MAX_IMAGE_SIZE_MB = 5;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
-const TITLE_MAX = 60;
+const TITLE_MAX = 50;
 const DESCRIPTION_MAX = 400;
 
 export default function ProjectRecruitPage() {
@@ -103,12 +103,17 @@ export default function ProjectRecruitPage() {
   };
 
   useEffect(() => {
+    const token = sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token");
+    if (!token) {
+      router.replace("/auth/login");
+      return;
+    }
     const update = () => setIsPC(window.innerWidth >= 900 && !isMobileUA());
     update();
     setMounted(true);
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, []);
+  }, [router]);
 
   const NavBarElement = mounted ? (isPC ? <SideNav active="home" /> : <BottomNav active="home" />) : null;
 

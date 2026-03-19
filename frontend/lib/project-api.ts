@@ -44,6 +44,7 @@ export async function createProject(data: {
     body: JSON.stringify(data),
   });
   if (!response.ok) {
+    if (response.status === 401) throw new Error("ログインが必要です。再度ログインしてください。");
     let detail = "プロジェクトの作成に失敗しました";
     try {
       const err = await response.json();
