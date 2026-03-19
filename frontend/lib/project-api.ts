@@ -1,6 +1,6 @@
 // プロジェクト詳細・応募・参加APIクライアント
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? "";
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
 
 export async function fetchProjectDetail(projectId: number) {
   const response = await fetch(`${baseUrl}/api/project/${projectId}`, {

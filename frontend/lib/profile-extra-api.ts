@@ -1,6 +1,7 @@
 // プロフィール全情報（本体・プロジェクト・統計・スキル）をまとめて取得
 export async function fetchProfileAll() {
-  const res = await fetch("/api/profile/me/", {
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
+  const res = await fetch(`${baseUrl}/api/profile/me/`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

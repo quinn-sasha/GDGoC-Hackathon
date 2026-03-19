@@ -1,6 +1,8 @@
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
+
 // プロフィール取得
 export async function fetchProfile() {
-  const res = await fetch("/api/profile/me/", {
+  const res = await fetch(`${baseUrl}/api/profile/me/`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -13,7 +15,7 @@ export async function fetchProfile() {
 
 // プロフィール更新
 export async function updateProfile(data: Partial<ProfileSummary>) {
-  const res = await fetch("/api/profile/me/", {
+  const res = await fetch(`${baseUrl}/api/profile/me/`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",

@@ -7,7 +7,7 @@ export type HomeFeedResponse = {
 };
 
 export async function fetchHomeFeed(): Promise<HomeFeedResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? "";
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
   const response = await fetch(`${baseUrl}/api/home`, {
     method: "GET",
     headers: {
