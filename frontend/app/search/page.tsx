@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 import React, { useEffect, useState, useMemo } from "react";
 import { CommonHeader } from "@/components/CommonHeader";
 import { CommonSearchBar } from "@/components/CommonSearchBar";
