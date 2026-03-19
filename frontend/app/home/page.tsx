@@ -348,7 +348,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section style={S.section}>
+        <section style={{ ...S.section, marginBottom: isPC ? 160 : 240 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <h3 style={{ margin: 0, fontSize: 16 }}>参加中のプロジェクト</h3>
             <a style={S.viewAll}>もっと見る</a>
