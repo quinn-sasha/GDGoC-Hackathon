@@ -230,7 +230,13 @@ export default function HomePage() {
       {NavBarElement}
       <CommonHeader title="ホーム" isPC={isPC} />
       <main style={{ padding: 12 }}>
-        <CommonSearchBar value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="プロジェクト、アイデアを検索" />
+        <CommonSearchBar
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onClear={() => setSearch("")}
+          placeholder="プロジェクト、アイデアを検索"
+          onSubmit={() => router.push(`/search?q=${encodeURIComponent(search)}`)}
+        />
         <CommonCategoryTabs categories={categories} active={activeCat} onSelect={(c) => setActiveCat(c)} />
 
         {fetchError ? <div style={{ color: "#b3b3b3", fontSize: "0.88rem", margin: "8px 20px" }}>{fetchError}</div> : null}
