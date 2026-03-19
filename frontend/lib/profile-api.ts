@@ -1,11 +1,10 @@
+import { getAuthToken } from "@/lib/auth-client";
+
 const BASE =
   process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
 
 function getAuthHeaders(): Record<string, string> {
-  const token =
-    typeof window !== "undefined"
-      ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
-      : null;
+  const token = getAuthToken();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
@@ -38,6 +37,30 @@ export async function fetchSkills(): Promise<{ id: number; name: string }[]> {
   });
   if (!res.ok) throw new Error("スキル一覧取得に失敗しました");
   return res.json();
+}
+
+// プロフィールアイコンをアップロード
+export async function uploadProfileIcon(file: File): Promise<string> {
+  const token = getAuthToken();
+  const formData = new FormData();
+  formData.append("image", file);
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/profile/me/upload-icon/`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  if (!res.ok) {
+    let detail = "アイコンのアップロードに失敗しました";
+    try {
+      const err = await res.json();
+      if (err.detail) detail = String(err.detail);
+    } catch { /* ignore */ }
+    throw new Error(detail);
+  }
+  const data = await res.json();
+  return data.icon_image_path as string;
 }
 
 // 他ユーザーのプロフィール取得（me の場合は自分のプロフィール）

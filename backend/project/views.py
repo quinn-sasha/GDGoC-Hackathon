@@ -1,6 +1,8 @@
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+from django.core.exceptions import ImproperlyConfigured
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 
 from message.services import get_or_create_project_chatroom
@@ -165,6 +167,58 @@ class ProjectViewSet(viewsets.ModelViewSet):
         )
         serializer = ApplicationDetailSerializer(apps, many=True)
         return Response(serializer.data)
+
+    @extend_schema(
+        summary="プロジェクト画像アップロード",
+        description="プロジェクトのサムネイル画像を GCS にアップロードし、project_image_path を更新します。",
+        responses={
+            200: OpenApiResponse(description="アップロード成功"),
+            400: OpenApiResponse(description="ファイルなし・形式エラー"),
+            403: OpenApiResponse(description="オーナー以外は不可"),
+            503: OpenApiResponse(description="GCS 未設定"),
+        },
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[permissions.IsAuthenticated],
+        parser_classes=[MultiPartParser],
+        url_path="upload-image",
+    )
+    def upload_image(self, request, pk=None):
+        """
+        プロジェクト画像アップロード
+        POST /api/projects/{id}/upload-image/  (multipart/form-data, field: image)
+        """
+        project = self.get_object()
+        if project.owner != request.user:
+            return Response(
+                {"detail": "プロジェクトのオーナーのみ画像をアップロードできます。"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        file = request.FILES.get("image")
+        if not file:
+            return Response(
+                {"detail": "image フィールドにファイルを添付してください。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from config.gcs import upload_image as gcs_upload, build_project_image_path, validate_image_file
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        try:
+            validate_image_file(file)
+        except DRFValidationError as e:
+            return Response({"detail": e.detail[0]}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            dest = build_project_image_path(str(project.id), file.name)
+            url = gcs_upload(file, dest)
+        except ImproperlyConfigured:
+            return Response(
+                {"detail": "画像ストレージが設定されていません。"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        project.project_image_path = url
+        project.save(update_fields=["project_image_path"])
+        return Response({"project_image_path": url}, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="お気に入り登録・解除",

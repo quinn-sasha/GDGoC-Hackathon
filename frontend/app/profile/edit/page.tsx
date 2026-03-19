@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { updateProfile, fetchProfile, fetchSkills } from "@/lib/profile-api";
+import { updateProfile, fetchProfile, fetchSkills, uploadProfileIcon } from "@/lib/profile-api";
 import { isMobileUA } from "@/lib/device";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
@@ -22,10 +22,12 @@ export default function ProfileEditPage() {
   const [allSkills, setAllSkills] = useState<Skill[]>([]);
   const [avatarInitial, setAvatarInitial] = useState("?");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [profileLoading, setProfileLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [imageWarning, setImageWarning] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
 
@@ -68,6 +70,7 @@ export default function ProfileEditPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setAvatarFile(file);
     const reader = new FileReader();
     reader.onload = () => setAvatarPreview(reader.result as string);
     reader.readAsDataURL(file);
@@ -86,7 +89,16 @@ export default function ProfileEditPage() {
     if (!canSave) return;
     setSaving(true);
     setSaveError(null);
+    setImageWarning(null);
     try {
+      // アイコン画像が選択されていればアップロード（失敗しても他の更新は続行）
+      if (avatarFile) {
+        try {
+          await uploadProfileIcon(avatarFile);
+        } catch {
+          setImageWarning("画像のアップロードに失敗しました。他の情報は保存されました。");
+        }
+      }
       await updateProfile({
         username: name,
         profile_bio: bio,
@@ -367,9 +379,12 @@ export default function ProfileEditPage() {
                 />
               )}
 
-              {/* エラーメッセージ */}
+              {/* エラー・警告メッセージ */}
               {saveError && (
                 <p style={{ margin: "4px 0 0", color: "#ff7d7d", fontSize: "0.83rem" }}>{saveError}</p>
+              )}
+              {imageWarning && (
+                <p style={{ margin: "4px 0 0", color: "#ffcc44", fontSize: "0.83rem" }}>{imageWarning}</p>
               )}
 
               {/* 保存ボタン */}
