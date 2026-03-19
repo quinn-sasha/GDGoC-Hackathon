@@ -230,7 +230,7 @@ export default function HomePage() {
     <div style={{ minHeight: "100vh", background: "#111111", color: "#ffffff", paddingLeft: isPC ? 100 : 0 }}>
       {NavBarElement}
       <CommonHeader title="ホーム" isPC={isPC} />
-      <main style={{ padding: 12 }}>
+      <main style={{ padding: 12, paddingBottom: isPC ? 24 : 160 }}>
         <CommonSearchBar
           value={search}
           onChange={(e) => setSearch(e.target.value)}
