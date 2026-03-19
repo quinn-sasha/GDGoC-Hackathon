@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
 import { isMobileUA } from "@/lib/device";
 import { createProject, uploadProjectImage } from "@/lib/project-api";
+import { buildProjectImage } from "@/lib/project-image";
 
 const STATUS_OPTIONS = [
   { value: "opening", label: "開始前" },
@@ -324,22 +325,30 @@ export default function ProjectRecruitPage() {
                     maxHeight: 220,
                     borderRadius: 12,
                     border: "1px dashed #3b3b3b",
-                    background: imagePreview ? "transparent" : "#1a1a1a",
+                    background: "transparent",
                     cursor: "pointer",
                     overflow: "hidden",
                     position: "relative",
                   }}
                 >
-                  {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="プレビュー"
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  ) : (
-                    <span style={{ color: "#5a5a5a", fontSize: "0.85rem" }}>
-                      クリックして画像を選択
-                    </span>
+                  <img
+                    src={imagePreview ?? buildProjectImage(trimmedTitle || "プロジェクト", "")}
+                    alt="プレビュー"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                  {!imagePreview && (
+                    <div style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "rgba(0,0,0,0.3)",
+                    }}>
+                      <span style={{ color: "#ffffff", fontSize: "0.85rem" }}>
+                        クリックして画像を選択
+                      </span>
+                    </div>
                   )}
                   <input
                     type="file"

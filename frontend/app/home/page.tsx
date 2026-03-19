@@ -140,6 +140,7 @@ export default function HomePage() {
       readTime: featured.readTime,
       hostInitial: featured.hostInitial,
       hostName: featured.hostName,
+      projectImagePath: featured.projectImagePath,
     };
     const updateProjects = updates
       .filter((item) => item.id !== featured?.id)
@@ -154,6 +155,7 @@ export default function HomePage() {
         readTime: item.time,
         hostInitial: item.avatarInitial,
         hostName: toDisplayName(item.author),
+        projectImagePath: item.projectImagePath,
       }));
     return [featuredProject, ...updateProjects];
   }, [featured, updates]);
@@ -264,7 +266,12 @@ export default function HomePage() {
                   tabIndex={0}
                 >
                   <div style={S.recommendedImageFrame}>
-                    <Image src={buildProjectImage(p.title, p.category)} alt={p.title} fill sizes="(max-width:480px) 100vw, 420px" style={{ objectFit: "cover" }} />
+                    {p.projectImagePath ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.projectImagePath} alt={p.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <Image src={buildProjectImage(p.title, p.category)} alt={p.title} fill sizes="(max-width:480px) 100vw, 420px" style={{ objectFit: "cover" }} />
+                    )}
                   </div>
                   <div style={S.recommendedContent}>
                     <div style={S.recommendedMetaRow}>
@@ -323,7 +330,14 @@ export default function HomePage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: "0.72rem", color: "#666666" }}>{u.author} ・ {u.category}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={S.avatarSm}>{u.avatarInitial}</div>
+                      <div style={{ ...S.avatarSm, overflow: "hidden" }}>
+                        {u.ownerIcon ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={u.ownerIcon} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          u.avatarInitial
+                        )}
+                      </div>
                       <span style={{ color: "#aaaaaa" }}>{toDisplayName(u.author)}</span>
                     </div>
                   </div>

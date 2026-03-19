@@ -1,10 +1,9 @@
 """
 GCS (Cloud Storage) への画像アップロードヘルパー
-GCS_BUCKET_NAME 環境変数が未設定の場合は ImproperlyConfigured を送出する
+GCS_BUCKET_NAME 環境変数が未設定の場合はローカルファイルシステムに保存する
 """
 import os
 import uuid
-from django.core.exceptions import ImproperlyConfigured
 from rest_framework import serializers
 
 # ---- マジックバイト定義 ----
@@ -67,22 +66,18 @@ def _get_client():
 def upload_image(file_obj, dest_path: str) -> str:
     """
     file_obj を GCS の dest_path にアップロードして公開 URL を返す。
+    GCS_BUCKET_NAME が未設定の場合はローカルファイルシステムに保存する。
 
     Args:
         file_obj: Django の UploadedFile オブジェクト
-        dest_path: バケット内の保存先パス (例: "projects/uuid/image.jpg")
+        dest_path: 保存先パス (例: "projects/uuid/image.jpg")
 
     Returns:
-        公開 URL (例: "https://storage.googleapis.com/{bucket}/{path}")
-
-    Raises:
-        ImproperlyConfigured: GCS_BUCKET_NAME が未設定
+        公開 URL
     """
     bucket_name = os.getenv("GCS_BUCKET_NAME", "")
     if not bucket_name:
-        raise ImproperlyConfigured(
-            "GCS_BUCKET_NAME 環境変数が設定されていません。"
-        )
+        return _upload_local(file_obj, dest_path)
 
     actual_type = detect_image_type(file_obj)
     client = _get_client()
@@ -91,6 +86,21 @@ def upload_image(file_obj, dest_path: str) -> str:
     blob.upload_from_file(file_obj, content_type=actual_type)
     blob.make_public()
     return blob.public_url
+
+
+def _upload_local(file_obj, dest_path: str) -> str:
+    """GCS 未設定時のローカルフォールバック。MEDIA_ROOT に保存してURLを返す。"""
+    import pathlib
+    from django.conf import settings
+
+    save_path = pathlib.Path(settings.MEDIA_ROOT) / dest_path
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    file_obj.seek(0)
+    with open(save_path, "wb") as f:
+        f.write(file_obj.read())
+    base_url = os.getenv("BACKEND_BASE_URL", "http://localhost:8000").rstrip("/")
+    media_url = getattr(settings, "MEDIA_URL", "/media/")
+    return f"{base_url}{media_url}{dest_path}"
 
 
 def build_project_image_path(project_id: str, filename: str) -> str:

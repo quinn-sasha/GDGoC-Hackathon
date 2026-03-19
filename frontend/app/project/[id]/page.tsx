@@ -270,9 +270,15 @@ export default function ProjectDetailPage() {
                           background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
                           display: "grid", placeItems: "center",
                           color: "#2b1f1c", fontWeight: 800, fontSize: "0.9rem",
+                          overflow: "hidden",
                         }}
                       >
-                        {app.applicant_name?.[0]?.toUpperCase() ?? "?"}
+                        {app.applicant_icon ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={app.applicant_icon} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          app.applicant_name?.[0]?.toUpperCase() ?? "?"
+                        )}
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>{app.applicant_name}</div>
@@ -342,9 +348,15 @@ export default function ProjectDetailPage() {
               background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
               display: "grid", placeItems: "center",
               color: "#2b1f1c", fontWeight: 800, fontSize: "1.1rem",
+              overflow: "hidden",
             }}
           >
-            {userProfile.username?.[0]?.toUpperCase() ?? "?"}
+            {userProfile.icon_image_path ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={userProfile.icon_image_path} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              userProfile.username?.[0]?.toUpperCase() ?? "?"
+            )}
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: "0.94rem", fontWeight: 700 }}>{userProfile.username}</div>
@@ -543,8 +555,13 @@ export default function ProjectDetailPage() {
             {/* 左: プロジェクト情報 */}
             <div>
               <div style={{ display: "grid", gridTemplateColumns: "52px minmax(0, 1fr) auto", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg, #f9a8a8 0%, #d47fa6 100%)", display: "grid", placeItems: "center", color: "#ffffff", fontSize: "1rem", fontWeight: 800 }}>
-                  {avatarInitial}
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg, #f9a8a8 0%, #d47fa6 100%)", display: "grid", placeItems: "center", color: "#ffffff", fontSize: "1rem", fontWeight: 800, overflow: "hidden" }}>
+                  {project.owner_icon ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={project.owner_icon} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    avatarInitial
+                  )}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <h1 style={{ margin: 0, fontSize: "1.5rem", lineHeight: 1.35 }}>{project.title}</h1>
@@ -559,12 +576,21 @@ export default function ProjectDetailPage() {
               </div>
 
               <div style={{ marginTop: 24 }}>
-                <Image
-                  src={buildProjectImage(project.title, category)}
-                  alt={`${project.title} のイメージ`}
-                  width={1200} height={720}
-                  style={{ display: "block", width: "100%", height: 320, objectFit: "cover", borderRadius: 20, border: "1px solid #2a2a2a", background: "#1a1a1a" }}
-                />
+                {project.project_image_path ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={project.project_image_path}
+                    alt={`${project.title} のイメージ`}
+                    style={{ display: "block", width: "100%", height: 320, objectFit: "cover", borderRadius: 20, border: "1px solid #2a2a2a", background: "#1a1a1a" }}
+                  />
+                ) : (
+                  <Image
+                    src={buildProjectImage(project.title, category)}
+                    alt={`${project.title} のイメージ`}
+                    width={1200} height={720}
+                    style={{ display: "block", width: "100%", height: 320, objectFit: "cover", borderRadius: 20, border: "1px solid #2a2a2a", background: "#1a1a1a" }}
+                  />
+                )}
               </div>
 
               {project.description && (
@@ -601,8 +627,13 @@ export default function ProjectDetailPage() {
           <main style={{ paddingBottom: 96 }}>
             <section style={{ padding: "22px 20px 0" }}>
               <div style={{ display: "grid", gridTemplateColumns: "52px minmax(0, 1fr) auto", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg, #f9a8a8 0%, #d47fa6 100%)", display: "grid", placeItems: "center", color: "#ffffff", fontSize: "1rem", fontWeight: 800 }}>
-                  {avatarInitial}
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg, #f9a8a8 0%, #d47fa6 100%)", display: "grid", placeItems: "center", color: "#ffffff", fontSize: "1rem", fontWeight: 800, overflow: "hidden" }}>
+                  {project.owner_icon ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={project.owner_icon} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    avatarInitial
+                  )}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <h1 style={{ margin: 0, fontSize: "1.25rem", lineHeight: 1.35 }}>{project.title}</h1>
@@ -617,12 +648,21 @@ export default function ProjectDetailPage() {
               </div>
 
               <div style={{ marginTop: 18 }}>
-                <Image
-                  src={buildProjectImage(project.title, category)}
-                  alt={`${project.title} のイメージ`}
-                  width={1200} height={720}
-                  style={{ display: "block", width: "100%", height: 220, objectFit: "cover", borderRadius: 20, border: "1px solid #2a2a2a", background: "#1a1a1a" }}
-                />
+                {project.project_image_path ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={project.project_image_path}
+                    alt={`${project.title} のイメージ`}
+                    style={{ display: "block", width: "100%", height: 220, objectFit: "cover", borderRadius: 20, border: "1px solid #2a2a2a", background: "#1a1a1a" }}
+                  />
+                ) : (
+                  <Image
+                    src={buildProjectImage(project.title, category)}
+                    alt={`${project.title} のイメージ`}
+                    width={1200} height={720}
+                    style={{ display: "block", width: "100%", height: 220, objectFit: "cover", borderRadius: 20, border: "1px solid #2a2a2a", background: "#1a1a1a" }}
+                  />
+                )}
               </div>
 
               {project.description && (

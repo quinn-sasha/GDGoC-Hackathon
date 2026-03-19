@@ -45,6 +45,8 @@ export type HomeFeedUpdate = {
   category: string;
   categoryTag: string;
   avatarInitial: string;
+  ownerIcon: string;
+  projectImagePath: string | null;
 };
 
 export type HomeFeedFeatured = {
@@ -56,10 +58,12 @@ export type HomeFeedFeatured = {
   description: string;
   hostInitial: string;
   hostName: string;
+  hostIcon: string;
   category: string;
   statusColor: string;
   statusBg: string;
   time: string;
+  projectImagePath: string | null;
 };
 
 export type HomeFeedResponse = {
@@ -99,6 +103,8 @@ export async function fetchHomeFeed(): Promise<HomeFeedResponse> {
       category,
       categoryTag: category,
       avatarInitial: (p.owner_name?.[0] ?? "?").toUpperCase(),
+      ownerIcon: p.owner_icon ?? "",
+      projectImagePath: p.project_image_path ?? null,
     };
   });
 
@@ -117,7 +123,9 @@ export async function fetchHomeFeed(): Promise<HomeFeedResponse> {
     description: Array.isArray(first.technologies) ? first.technologies.join(" / ") : "",
     hostInitial: (first.owner_name?.[0] ?? "?").toUpperCase(),
     hostName: first.owner_name ?? "",
+    hostIcon: first.owner_icon ?? "",
     category: firstCategory,
+    projectImagePath: first.project_image_path ?? null,
     statusColor: firstStyle.statusColor,
     statusBg: firstStyle.statusBg,
     time: formatRelativeTime(first.updated_at),

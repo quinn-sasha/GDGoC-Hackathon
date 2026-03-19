@@ -193,9 +193,15 @@ export default function ChatPage() {
                       fontSize: "1.2rem",
                       fontWeight: 800,
                       color: "#2b1f1c",
+                      overflow: "hidden",
                     }}
                   >
-                    {avatarInitial}
+                    {thread.other_user?.icon_image_path ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={thread.other_user.icon_image_path} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      avatarInitial
+                    )}
                   </div>
                 </div>
 
