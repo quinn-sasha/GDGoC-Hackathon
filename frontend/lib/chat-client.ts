@@ -42,6 +42,7 @@ export type Conversation = {
   id: string; // UUID
   room_type: "PERSONAL_CHAT" | "PROJECT_CHAT";
   project_id: string | null;
+  project_title: string | null;
   other_user: ConversationOtherUser | null;
   last_message: ConversationLastMessage | null;
   unread_count: number;

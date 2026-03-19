@@ -151,6 +151,9 @@ export default function ChatPage() {
             const avatarInitial = name[0]?.toUpperCase() ?? "?";
             const preview = thread.last_message?.content ?? "メッセージはまだありません";
             const timeStr = formatRelativeTime(thread.updated_at);
+            const projectLabel = thread.room_type === "PROJECT_CHAT" && thread.project_title
+              ? thread.project_title
+              : null;
 
             return (
               <article
@@ -198,19 +201,40 @@ export default function ChatPage() {
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: "0.95rem",
-                        lineHeight: 1.3,
-                        fontWeight: 700,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {name}
-                    </h2>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <h2
+                        style={{
+                          margin: 0,
+                          fontSize: "0.95rem",
+                          lineHeight: 1.3,
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {name}
+                      </h2>
+                      {projectLabel && (
+                        <span
+                          style={{
+                            display: "inline-block",
+                            fontSize: "0.72rem",
+                            color: "#8aff1d",
+                            background: "rgba(138,255,29,0.1)",
+                            borderRadius: 4,
+                            padding: "1px 6px",
+                            marginTop: 2,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: "100%",
+                          }}
+                        >
+                          {projectLabel}
+                        </span>
+                      )}
+                    </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                       {thread.unread_count > 0 ? (
                         <span
