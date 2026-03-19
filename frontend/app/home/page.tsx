@@ -230,7 +230,7 @@ export default function HomePage() {
     <div style={{ minHeight: "100vh", background: "#111111", color: "#ffffff", paddingLeft: isPC ? 100 : 0 }}>
       {NavBarElement}
       <CommonHeader title="ホーム" isPC={isPC} />
-      <main style={{ padding: 12, paddingBottom: isPC ? 24 : 160 }}>
+      <main style={{ padding: 12, paddingBottom: isPC ? 140 : 200 }}>
         <CommonSearchBar
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -348,7 +348,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section style={S.section}>
+        <section style={{ ...S.section, marginBottom: isPC ? 160 : 240 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <h3 style={{ margin: 0, fontSize: 16 }}>参加中のプロジェクト</h3>
             <a style={S.viewAll}>もっと見る</a>
