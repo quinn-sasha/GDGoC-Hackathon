@@ -111,17 +111,15 @@ export default function HomePage() {
     };
   }, []);
 
-  const normalizedSearchQuery = search.trim().toLowerCase();
-  const isSearchMode = normalizedSearchQuery !== "";
+  // On the Home page, typing into the search bar should not filter the feed in-place.
+  // The search input is kept for UX, but actual search is performed on the separate /search page
+  // when the user submits (Enter / icon). Therefore ignore `search` for filtering here.
+  const normalizedSearchQuery = "";
+  const isSearchMode = false;
 
   const filteredUpdates = updates.filter((u) => {
     const matchesCategory = isAllCategory(activeCat) || u.categoryTag === activeCat;
-    const matchesSearch =
-      normalizedSearchQuery === "" ||
-      u.title.toLowerCase().includes(normalizedSearchQuery) ||
-      u.description.toLowerCase().includes(normalizedSearchQuery) ||
-      u.author.toLowerCase().includes(normalizedSearchQuery);
-    return matchesCategory && matchesSearch;
+    return matchesCategory;
   });
 
   const sortedUpdates = [...filteredUpdates];
@@ -230,7 +228,13 @@ export default function HomePage() {
       {NavBarElement}
       <CommonHeader title="ホーム" isPC={isPC} />
       <main style={{ padding: 12 }}>
-        <CommonSearchBar value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="プロジェクト、アイデアを検索" />
+        <CommonSearchBar
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onClear={() => setSearch("")}
+          placeholder="プロジェクト、アイデアを検索"
+          onSubmit={() => router.push(`/search?q=${encodeURIComponent(search)}`)}
+        />
         <CommonCategoryTabs categories={categories} active={activeCat} onSelect={(c) => setActiveCat(c)} />
 
         {fetchError ? <div style={{ color: "#b3b3b3", fontSize: "0.88rem", margin: "8px 20px" }}>{fetchError}</div> : null}
