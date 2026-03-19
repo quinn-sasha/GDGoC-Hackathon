@@ -2,7 +2,8 @@ from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import generics, permissions
 
-from .serializers import MyProfileSerializer, UserProfileSerializer
+from .models import TechSkill
+from .serializers import MyProfileSerializer, TechSkillSerializer, UserProfileSerializer
 
 User = get_user_model()
 
@@ -39,6 +40,22 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
             .prefetch_related("skills")
             .get(pk=self.request.user.pk)
         )
+
+
+@extend_schema(tags=["プロフィール"])
+class TechSkillListView(generics.ListAPIView):
+    """GET /api/profile/skills/ — 技術スキル一覧取得"""
+
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = TechSkillSerializer
+    queryset = TechSkill.objects.all().order_by("name")
+
+    @extend_schema(
+        summary="技術スキル一覧を取得",
+        responses={200: TechSkillSerializer(many=True)},
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
 
 @extend_schema(tags=["プロフィール"])

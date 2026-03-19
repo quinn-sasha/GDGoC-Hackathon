@@ -31,6 +31,15 @@ export async function updateProfile(data: Record<string, unknown>) {
   return res.json();
 }
 
+// 技術スキル一覧取得
+export async function fetchSkills(): Promise<{ id: number; name: string }[]> {
+  const res = await fetch(`${BASE}/api/profile/skills/`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("スキル一覧取得に失敗しました");
+  return res.json();
+}
+
 // 他ユーザーのプロフィール取得（me の場合は自分のプロフィール）
 export async function fetchProfileById(userId: string) {
   const url =
