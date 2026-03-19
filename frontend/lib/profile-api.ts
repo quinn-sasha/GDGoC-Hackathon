@@ -1,48 +1,45 @@
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
-
-// 型定義（既存のProfileSummaryを利用）
-import type { ProfileSummary } from "@/lib/mock-data";
+const BASE =
+  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
 
 function getAuthHeaders(): Record<string, string> {
-  const token = typeof window !== "undefined" ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token")) : null;
+  const token =
+    typeof window !== "undefined"
+      ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
+      : null;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
 
-// プロフィール取得
+// 自分のプロフィール取得
 export async function fetchProfile() {
-  const headers = getAuthHeaders();
-  const res = await fetch(`${baseUrl}/api/profile/me/`, {
-    method: "GET",
-    headers,
-    credentials: "include",
+  const res = await fetch(`${BASE}/api/profile/me/`, {
+    headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error("プロフィール取得に失敗しました");
   return res.json();
 }
 
 // プロフィール更新
-export async function updateProfile(data: Partial<ProfileSummary>) {
-  const headers = getAuthHeaders();
-  const res = await fetch(`${baseUrl}/api/profile/me/`, {
+export async function updateProfile(data: Record<string, unknown>) {
+  const res = await fetch(`${BASE}/api/profile/me/`, {
     method: "PATCH",
-    headers,
-    credentials: "include",
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("プロフィール更新に失敗しました");
   return res.json();
 }
 
-// プロフィール全情報（本体・プロジェクト・統計・スキル）をまとめて取得
-export async function fetchProfileAll() {
-  const headers = getAuthHeaders();
-  const res = await fetch(`${baseUrl}/api/profile/me/`, {
-    method: "GET",
-    headers,
-    credentials: "include",
+// 他ユーザーのプロフィール取得（me の場合は自分のプロフィール）
+export async function fetchProfileById(userId: string) {
+  const url =
+    userId === "me"
+      ? `${BASE}/api/profile/me/`
+      : `${BASE}/api/profile/${encodeURIComponent(userId)}/`;
+  const res = await fetch(url, {
+    headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error("プロフィール情報の取得に失敗しました");
+  if (!res.ok) throw new Error("プロフィール取得に失敗しました");
   return res.json();
 }
