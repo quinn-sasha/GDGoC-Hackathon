@@ -11,6 +11,7 @@ import { buildProjectImage } from "@/lib/project-image";
 import { HOME_CATEGORIES } from "@/lib/mock-data";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { buildUrl } from "@/lib/url";
 
 const S = {
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 8px" },
@@ -229,13 +230,13 @@ export default function HomePage() {
     <div style={{ minHeight: "100vh", background: "#111111", color: "#ffffff", paddingLeft: isPC ? 100 : 0 }}>
       {NavBarElement}
       <CommonHeader title="ホーム" isPC={isPC} />
-      <main style={{ padding: 12 }}>
+      <main style={{ padding: 12, paddingBottom: isPC ? 24 : 160 }}>
         <CommonSearchBar
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onClear={() => setSearch("")}
           placeholder="プロジェクト、アイデアを検索"
-          onSubmit={(v) => router.push(`/search?q=${encodeURIComponent((v ?? search) || "")}`)}
+          onSubmit={(v) => router.push(buildUrl("/search", { q: (v ?? search) || "" }))}
         />
         <CommonCategoryTabs categories={categories} active={activeCat} onSelect={(c) => setActiveCat(c)} />
 
