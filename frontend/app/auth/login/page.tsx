@@ -40,14 +40,17 @@ export default function LoginPage() {
       }
 
       // Store tokens if returned (localStorage/sessionStorage)
-      if (result.access) {
+      // Use a safe access pattern to avoid TypeScript compile issues in build.
+      const accessToken = (result as any)?.access as string | undefined;
+      const refreshToken = (result as any)?.refresh as string | undefined;
+      if (accessToken) {
         try {
           if (payload.remember) {
-            localStorage.setItem("access_token", result.access);
-            if (result.refresh) localStorage.setItem("refresh_token", result.refresh);
+            localStorage.setItem("access_token", accessToken);
+            if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
           } else {
-            sessionStorage.setItem("access_token", result.access);
-            if (result.refresh) sessionStorage.setItem("refresh_token", result.refresh);
+            sessionStorage.setItem("access_token", accessToken);
+            if (refreshToken) sessionStorage.setItem("refresh_token", refreshToken);
           }
         } catch {
           /* ignore storage errors in restricted environments */
