@@ -116,3 +116,14 @@ export async function fetchConversationById(id: string): Promise<Conversation | 
   const data = await fetchConversations();
   return data.results.find((c) => c.id === id) ?? null;
 }
+
+// 個人チャットを作成（既存の場合はそれを返す）
+export async function createConversation(userId: number): Promise<Conversation> {
+  const res = await fetch(`${BASE}/api/conversations/`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ user_id: userId }),
+  });
+  if (!res.ok) throw new Error("チャットの作成に失敗しました");
+  return res.json();
+}

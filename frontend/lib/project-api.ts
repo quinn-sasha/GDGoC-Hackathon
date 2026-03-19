@@ -74,8 +74,16 @@ export async function submitProjectApplication({
   const response = await fetch(`${baseUrl}/api/projects/${projectId}/apply/`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ role, availability, message, portfolioUrl }),
+    body: JSON.stringify({ role, availability, message, portfolio_url: portfolioUrl }),
   });
-  if (!response.ok) throw new Error("応募の送信に失敗しました");
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("ログインが必要です。再度ログインしてください。");
+    let detail = "応募の送信に失敗しました";
+    try {
+      const err = await response.json();
+      if (err.detail) detail = String(err.detail);
+    } catch { /* ignore */ }
+    throw new Error(detail);
+  }
   return await response.json();
 }
