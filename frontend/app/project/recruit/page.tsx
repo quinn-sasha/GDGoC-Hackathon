@@ -458,7 +458,7 @@ export default function ProjectRecruitPage() {
             cursor: canSubmit ? "pointer" : "default",
             opacity: canSubmit ? 1 : 0.55,
           }}
-          disabled={!canSubmit}
+          disabled={isSubmitting}
         >
           {isSubmitting ? "作成中..." : "作成"}
         </button>
