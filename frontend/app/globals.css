@@ -37,7 +37,7 @@ body {
 }
 
 .login-card {
-  width: min(100%, 440px);
+  width: min(100%, 560px);
   padding: 36px;
   border-radius: 20px;
   border: 1px solid var(--border);
