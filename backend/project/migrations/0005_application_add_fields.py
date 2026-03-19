@@ -4,30 +4,68 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+    """
+    project_application テーブルは本番DBに存在しない可能性があるため、
+    - テーブルがない場合: CREATE TABLE IF NOT EXISTS で全カラムを含めて作成
+    - テーブルがある場合: ALTER TABLE ... ADD COLUMN IF NOT EXISTS で新カラムのみ追加
+    どちらの場合も冪等に動作する。
+    """
 
     dependencies = [
         ('project', '0004_add_project_image_path'),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='application',
-            name='availability',
-            field=models.CharField(blank=True, default='', max_length=100, verbose_name='参加ペース'),
-        ),
-        migrations.AddField(
-            model_name='application',
-            name='message',
-            field=models.TextField(blank=True, default='', verbose_name='メッセージ'),
-        ),
-        migrations.AddField(
-            model_name='application',
-            name='portfolio_url',
-            field=models.CharField(blank=True, default='', max_length=200, verbose_name='ポートフォリオURL'),
-        ),
-        migrations.AddField(
-            model_name='application',
-            name='role',
-            field=models.CharField(blank=True, default='', max_length=100, verbose_name='希望役割'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="""
+                    CREATE TABLE IF NOT EXISTS project_application (
+                        id UUID PRIMARY KEY,
+                        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                        role VARCHAR(100) NOT NULL DEFAULT '',
+                        availability VARCHAR(100) NOT NULL DEFAULT '',
+                        message TEXT NOT NULL DEFAULT '',
+                        portfolio_url VARCHAR(200) NOT NULL DEFAULT '',
+                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                        applicant_id BIGINT NOT NULL REFERENCES accounts_user(id) ON DELETE CASCADE,
+                        project_id UUID NOT NULL REFERENCES project_project(id) ON DELETE CASCADE,
+                        UNIQUE (project_id, applicant_id)
+                    );
+                    ALTER TABLE project_application ADD COLUMN IF NOT EXISTS role VARCHAR(100) NOT NULL DEFAULT '';
+                    ALTER TABLE project_application ADD COLUMN IF NOT EXISTS availability VARCHAR(100) NOT NULL DEFAULT '';
+                    ALTER TABLE project_application ADD COLUMN IF NOT EXISTS message TEXT NOT NULL DEFAULT '';
+                    ALTER TABLE project_application ADD COLUMN IF NOT EXISTS portfolio_url VARCHAR(200) NOT NULL DEFAULT '';
+                    """,
+                    reverse_sql="""
+                    ALTER TABLE project_application DROP COLUMN IF EXISTS role;
+                    ALTER TABLE project_application DROP COLUMN IF EXISTS availability;
+                    ALTER TABLE project_application DROP COLUMN IF EXISTS message;
+                    ALTER TABLE project_application DROP COLUMN IF EXISTS portfolio_url;
+                    """,
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name='application',
+                    name='availability',
+                    field=models.CharField(blank=True, default='', max_length=100, verbose_name='参加ペース'),
+                ),
+                migrations.AddField(
+                    model_name='application',
+                    name='message',
+                    field=models.TextField(blank=True, default='', verbose_name='メッセージ'),
+                ),
+                migrations.AddField(
+                    model_name='application',
+                    name='portfolio_url',
+                    field=models.CharField(blank=True, default='', max_length=200, verbose_name='ポートフォリオURL'),
+                ),
+                migrations.AddField(
+                    model_name='application',
+                    name='role',
+                    field=models.CharField(blank=True, default='', max_length=100, verbose_name='希望役割'),
+                ),
+            ],
         ),
     ]
