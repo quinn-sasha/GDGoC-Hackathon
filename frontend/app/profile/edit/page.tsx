@@ -52,6 +52,7 @@ export default function ProfileEditPage() {
         setBio(profile.profile_bio ?? "");
         setGithubUrl(profile.github_url ?? "");
         setAvatarInitial((profile.username?.[0] ?? "?").toUpperCase());
+        if (profile.icon_image_path) setAvatarPreview(profile.icon_image_path);
         setAllSkills(skills);
         const profileSkillIds = new Set((profile.skills ?? []).map((s: Skill) => s.id));
         setSelectedSkills(skills.filter((s: Skill) => profileSkillIds.has(s.id)));
