@@ -17,13 +17,13 @@ const S = {
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 8px" },
   searchWrap: { margin: "10px 20px" },
   catsRow: { display: "flex", gap: 8, padding: "8px 20px", overflowX: "auto" as const },
-  recommendedRail: { display: "flex", gap: 12, overflowX: "auto" as const, paddingBottom: 4 },
+  recommendedRail: { display: "flex", gap: 12, overflowX: "auto" as const, paddingBottom: 4, scrollSnapType: "x mandatory" as const, scrollBehavior: "smooth" as const },
   recommendedCard: { width: 320, minWidth: 320, scrollSnapAlign: "start" as const, borderRadius: 12, overflow: "hidden", background: "#171717", border: "1px solid #2a2a2a" },
   recommendedDots: { display: "flex", justifyContent: "center", gap: 8, marginTop: 12 },
   recommendedImageFrame: { position: "relative" as const, width: "100%", aspectRatio: "16/9", background: "#152126" },
   recommendedContent: { padding: "14px 16px 16px" },
   recommendedMetaRow: { display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 10 },
-  recommendedDot: { width: 8, height: 8, borderRadius: "50%", background: "#444444", cursor: "pointer" },
+  recommendedDot: { width: 8, height: 8, borderRadius: "50%", background: "#444444", cursor: "pointer", border: "none", padding: 0, outline: "none" },
   recommendedDotActive: { background: "#ffffff", transform: "scale(1.15)" },
   section: { padding: "12px 20px 8px" },
   viewAll: { fontSize: "0.82rem", color: "#888888", textDecoration: "none" },
@@ -151,7 +151,7 @@ export default function HomePage() {
     };
     const updateProjects = updates
       .filter((item) => item.id !== featured?.id)
-      .slice(0, 2)
+      .slice(0, 8)
       .map((item) => ({
         id: item.id,
         title: item.title,
@@ -169,9 +169,10 @@ export default function HomePage() {
 
   const handleSelectRecommendation = (index: number) => {
     setActiveRecommendationIndex(index);
+    const rail = recommendedRailRef.current;
     const nextCard = recommendedCardRefs.current[index];
-    if (nextCard) {
-      nextCard.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    if (rail && nextCard) {
+      rail.scrollTo({ left: nextCard.offsetLeft, behavior: "smooth" });
     }
   };
 
@@ -249,7 +250,7 @@ export default function HomePage() {
         {fetchError ? <div style={{ color: "#b3b3b3", fontSize: "0.88rem", margin: "8px 20px" }}>{fetchError}</div> : null}
 
         <section style={S.section}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>おすすめ</h2>
+          <h2 style={{ margin: 5, fontSize: 22 }}>おすすめ</h2>
           <div
             ref={recommendedRailRef}
             style={S.recommendedRail}
@@ -308,7 +309,7 @@ export default function HomePage() {
 
         <section ref={updatesSectionRef} style={S.section}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <h3 style={{ margin: 0, fontSize: 16 }}>{isSearchMode ? "検索結果" : showAllUpdates ? "最近の更新プロジェクト" : "最新の更新"}</h3>
+            <h3 style={{ margin: 5, fontSize: 22 }}>{isSearchMode ? "検索結果" : showAllUpdates ? "最近の更新プロジェクト" : "最新の更新"}</h3>
             {showAllUpdates && !isSearchMode ? (
               <button type="button" style={{ ...S.viewAll, background: "none", border: "none", cursor: "pointer" }} onClick={handleCloseAllUpdates}>
                 閉じる
@@ -356,7 +357,7 @@ export default function HomePage() {
 
         <section style={{ ...S.section, marginBottom: isPC ? 160 : 240 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <h3 style={{ margin: 0, fontSize: 16 }}>参加中のプロジェクト</h3>
+            <h3 style={{ margin: 5, fontSize: 22 }}>参加中のプロジェクト</h3>
             <a style={S.viewAll}>もっと見る</a>
           </div>
           {profileProjects.length === 0 ? (

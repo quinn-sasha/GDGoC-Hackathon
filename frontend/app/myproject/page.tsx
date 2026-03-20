@@ -9,6 +9,9 @@ import { fetchProfileAll } from "@/lib/profile-extra-api";
 import { buildProjectImage } from "@/lib/project-image";
 import { isMobileUA } from "@/lib/device";
 
+const STATUS_LABEL: Record<string, string> = { opening: "開始前", ongoing: "進行中", completed: "完了" };
+const STATUS_COLOR: Record<string, string> = { opening: "#6699ff", ongoing: "#4fc3a1", completed: "#cc9944" };
+
 export default function MyProjectsIndexPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,12 +96,14 @@ export default function MyProjectsIndexPage() {
                 <div style={{ padding: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <h3 style={{ margin: 0, fontSize: "1rem" }}>{p.title}</h3>
-                    <span style={{ fontSize: "0.78rem", color: "#aaa" }}>{p.meta ?? p.progress_status ?? ""}</span>
+                    <span style={{ fontSize: "0.78rem", color: STATUS_COLOR[p.progress_status] ?? "#aaa", background: "#1a1a1a", borderRadius: 5, padding: "2px 8px" }}>
+                      {STATUS_LABEL[p.progress_status] ?? p.progress_status ?? ""}
+                    </span>
                   </div>
-                  <p style={{ margin: "0 0 12px", color: "#cfcfcf", fontSize: "0.9rem", lineHeight: 1.5 }}>{p.description ?? "説明がありません"}</p>
+                  <p style={{ margin: "0 0 12px", color: "#cfcfcf", fontSize: "0.9rem", lineHeight: 1.5 }}>{p.description ?? ""}</p>
                   <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => router.push(p.id ? `/project/${p.id}` : `/myproject/${encodeURIComponent(p.title)}`)} style={{ borderRadius: 8, background: "#8aff1d", color: "#111", fontWeight: 700, padding: "8px 12px", border: "none", cursor: "pointer" }}>開く</button>
+                      <button onClick={() => router.push(`/project/${p.id}`)} style={{ borderRadius: 8, background: "#8aff1d", color: "#111", fontWeight: 700, padding: "8px 12px", border: "none", cursor: "pointer" }}>開く</button>
                     </div>
                   </div>
                 </div>

@@ -6,6 +6,8 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from project.models import TechSkill as ProjectTechSkill
+
 from .models import TechSkill
 from .serializers import MyProfileSerializer, TechSkillSerializer, UserProfileSerializer
 
@@ -39,10 +41,8 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
         return super().patch(request, *args, **kwargs)
 
     def get_object(self):
-        return (
-            self.request.user.__class__.objects
-            .prefetch_related("skills")
-            .get(pk=self.request.user.pk)
+        return self.request.user.__class__.objects.prefetch_related("skills").get(
+            pk=self.request.user.pk
         )
 
 
@@ -52,7 +52,7 @@ class TechSkillListView(generics.ListAPIView):
 
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TechSkillSerializer
-    queryset = TechSkill.objects.all().order_by("name")
+    queryset = ProjectTechSkill.objects.all().order_by("name")
 
     @extend_schema(
         summary="技術スキル一覧を取得",
@@ -84,8 +84,13 @@ class UploadIconView(APIView):
                 {"detail": "image フィールドにファイルを添付してください。"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        from config.gcs import upload_image as gcs_upload, build_user_icon_path, validate_image_file
+        from config.gcs import (
+            upload_image as gcs_upload,
+            build_user_icon_path,
+            validate_image_file,
+        )
         from rest_framework.exceptions import ValidationError as DRFValidationError
+
         try:
             validate_image_file(file)
         except DRFValidationError as e:

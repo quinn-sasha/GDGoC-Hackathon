@@ -84,7 +84,9 @@ class ConversationAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["content"], "こんにちは")
         self.assertEqual(response.data["sender"]["username"], self.user1.username)
-        self.assertEqual(response.data["sender"]["id"], self.user1.id)  # 整数型であることを確認
+        self.assertEqual(
+            response.data["sender"]["id"], self.user1.id
+        )  # 整数型であることを確認
 
     def test_get_messages(self):
         chatroom = Chatroom.objects.create(room_type=Chatroom.RoomType.PERSONAL_CHAT)

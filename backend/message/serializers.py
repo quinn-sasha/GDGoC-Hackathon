@@ -4,7 +4,7 @@ from .models import Chatroom, Message
 
 
 class SenderSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
+    id = serializers.CharField()
     username = serializers.CharField()
     icon_image_path = serializers.CharField()
 
