@@ -147,6 +147,7 @@ export default function HomePage() {
       readTime: featured.readTime,
       hostInitial: featured.hostInitial,
       hostName: featured.hostName,
+      hostIcon: featured.hostIcon,
       projectImagePath: featured.projectImagePath,
     };
     const updateProjects = updates
@@ -165,6 +166,7 @@ export default function HomePage() {
         readTime: item.time,
         hostInitial: item.avatarInitial,
         hostName: toDisplayName(item.author),
+        hostIcon: item.ownerIcon,
         projectImagePath: item.projectImagePath,
       }));
     const featuredWithExtras = {
@@ -311,8 +313,13 @@ export default function HomePage() {
                       </div>
                     )}
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#4fc3a1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 700, flexShrink: 0 }}>
-                        {(p.hostInitial ?? "?").toUpperCase()}
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#4fc3a1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 700, flexShrink: 0, overflow: "hidden" }}>
+                        {p.hostIcon ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.hostIcon} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          (p.hostInitial ?? "?").toUpperCase()
+                        )}
                       </div>
                       <span style={{ fontSize: "0.78rem", color: "#777", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{p.hostName}</span>
                     </div>
@@ -430,7 +437,12 @@ export default function HomePage() {
                 return (
                   <article key={project.id ?? title} style={{ ...S.card, borderLeft: `6px solid ${color}` }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-                      <div style={{ ...S.avatarSm, background: color }}>{initial}</div>
+                      <div style={{ ...S.avatarSm, background: color, overflow: "hidden" }}>
+                        {project.owner_icon ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={project.owner_icon} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : initial}
+                      </div>
                       <div style={{ flex: 1 }}>
                         <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#fff" }}>{title}</h4>
                         <span style={{ fontSize: "0.78rem", color: "#aaaaaa" }}>{project.owner_name ?? project.meta}</span>
