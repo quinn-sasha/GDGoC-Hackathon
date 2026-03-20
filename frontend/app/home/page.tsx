@@ -17,13 +17,13 @@ const S = {
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 8px" },
   searchWrap: { margin: "10px 20px" },
   catsRow: { display: "flex", gap: 8, padding: "8px 20px", overflowX: "auto" as const },
-  recommendedRail: { display: "flex", gap: 12, overflowX: "auto" as const, paddingBottom: 4 },
+  recommendedRail: { display: "flex", gap: 12, overflowX: "auto" as const, paddingBottom: 4, scrollSnapType: "x mandatory" as const, scrollBehavior: "smooth" as const },
   recommendedCard: { width: 320, minWidth: 320, scrollSnapAlign: "start" as const, borderRadius: 12, overflow: "hidden", background: "#171717", border: "1px solid #2a2a2a" },
   recommendedDots: { display: "flex", justifyContent: "center", gap: 8, marginTop: 12 },
   recommendedImageFrame: { position: "relative" as const, width: "100%", aspectRatio: "16/9", background: "#152126" },
   recommendedContent: { padding: "14px 16px 16px" },
   recommendedMetaRow: { display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 10 },
-  recommendedDot: { width: 8, height: 8, borderRadius: "50%", background: "#444444", cursor: "pointer" },
+  recommendedDot: { width: 8, height: 8, borderRadius: "50%", background: "#444444", cursor: "pointer", border: "none", padding: 0, outline: "none" },
   recommendedDotActive: { background: "#ffffff", transform: "scale(1.15)" },
   section: { padding: "12px 20px 8px" },
   viewAll: { fontSize: "0.82rem", color: "#888888", textDecoration: "none" },
@@ -169,9 +169,10 @@ export default function HomePage() {
 
   const handleSelectRecommendation = (index: number) => {
     setActiveRecommendationIndex(index);
+    const rail = recommendedRailRef.current;
     const nextCard = recommendedCardRefs.current[index];
-    if (nextCard) {
-      nextCard.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    if (rail && nextCard) {
+      rail.scrollTo({ left: nextCard.offsetLeft, behavior: "smooth" });
     }
   };
 
