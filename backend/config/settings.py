@@ -152,8 +152,13 @@ else:
     CORS_ALLOWED_ORIGINS = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+# CSRF 設定（Cloud Run ドメイン等を許可）
+# (CORS の資格情報送信を許可するために CORS_ALLOW_CREDENTIALS を有効化)
     ]
 
+CORS_ALLOW_CREDENTIALS = True
+
+# CSRF 設定（Cloud Run ドメイン等を許可）
 # CSRF 設定（Cloud Run ドメイン等を許可）
 _csrf_origins = os.getenv("CSRF_TRUSTED_ORIGINS")
 if _csrf_origins:
