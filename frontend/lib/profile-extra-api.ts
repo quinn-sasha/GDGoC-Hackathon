@@ -40,17 +40,22 @@ function mapProjectForUI(p: any) {
   const owner = p.owner_name ?? "";
   const meta = categoryText ? (owner ? `${categoryText} · ${owner}` : categoryText) : owner;
   const badge = p.progress_status ?? "";
-  const initial = title.trim().charAt(0).toUpperCase() || "P";
-  const accent = ACCENTS[hashStringToIndex(title + (p.id ?? ""), ACCENTS.length)];
+  const initial = (p.initial ?? title.trim().charAt(0).toUpperCase()) || "P";
+  const accent = p.accent ?? ACCENTS[hashStringToIndex(title + (p.id ?? ""), ACCENTS.length)];
   const description = p.description ?? "";
   const members = p.members ?? "";
   return {
-    // fields expected by existing UI
+    // fields expected by different UI areas
     id: p.id,
+    // keep both `name` and `title` for compatibility
     name: title,
+    title: title,
+    project_image_path: p.project_image_path,
+    categories,
     meta,
     description,
     badge,
+    progress_status: p.progress_status,
     initial,
     accent,
     members,
