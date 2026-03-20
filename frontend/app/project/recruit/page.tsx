@@ -33,6 +33,7 @@ export default function ProjectRecruitPage() {
   const [isPC, setIsPC] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [availableSkills, setAvailableSkills] = useState<string[]>([]);
+  const [skillSearch, setSkillSearch] = useState("");
 
   const trimmedTitle = title.trim();
   const trimmedDescription = description.trim();
@@ -68,6 +69,15 @@ export default function ProjectRecruitPage() {
     reader.onload = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
   };
+
+  const closeSkillPicker = () => {
+    setShowSkillPicker(false);
+    setSkillSearch("");
+  };
+
+  const filteredSkills = skillSearch.trim()
+    ? availableSkills.filter((s) => s.includes(skillSearch.trim().toLowerCase()))
+    : availableSkills;
 
   const toggleSkill = (skill: string) => {
     setSkills((prev) =>
@@ -435,7 +445,7 @@ export default function ProjectRecruitPage() {
                 alignItems: "flex-end",
                 justifyContent: "center",
               }}
-              onClick={() => setShowSkillPicker(false)}
+              onClick={closeSkillPicker}
             >
               <section
                 style={{
@@ -452,7 +462,7 @@ export default function ProjectRecruitPage() {
                   <h3 style={{ margin: 0, fontSize: "0.98rem", fontWeight: 800 }}>スキルを選択</h3>
                   <button
                     type="button"
-                    onClick={() => setShowSkillPicker(false)}
+                    onClick={closeSkillPicker}
                     style={{
                       border: "none",
                       background: "none",
@@ -469,7 +479,48 @@ export default function ProjectRecruitPage() {
 
                 <div
                   style={{
-                    maxHeight: "52vh",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    background: "#111111",
+                    border: "1px solid #353535",
+                    borderRadius: 10,
+                    padding: "8px 12px",
+                    marginBottom: 12,
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b8b8b" strokeWidth="2.5">
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={skillSearch}
+                    onChange={(e) => setSkillSearch(e.target.value)}
+                    placeholder="スキルを検索..."
+                    autoFocus
+                    style={{
+                      flex: 1,
+                      background: "transparent",
+                      border: "none",
+                      outline: "none",
+                      color: "#ffffff",
+                      fontSize: "0.88rem",
+                    }}
+                  />
+                  {skillSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setSkillSearch("")}
+                      style={{ background: "none", border: "none", color: "#8b8b8b", cursor: "pointer", padding: 0, lineHeight: 1, fontSize: "1rem" }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    maxHeight: "45vh",
                     overflowY: "auto",
                     display: "grid",
                     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -481,7 +532,11 @@ export default function ProjectRecruitPage() {
                     <div style={{ gridColumn: "1 / -1", textAlign: "center", color: "#8b8b8b", padding: "20px 0", fontSize: "0.85rem" }}>
                       読み込み中...
                     </div>
-                  ) : availableSkills.map((skill) => {
+                  ) : filteredSkills.length === 0 ? (
+                    <div style={{ gridColumn: "1 / -1", textAlign: "center", color: "#8b8b8b", padding: "20px 0", fontSize: "0.85rem" }}>
+                      「{skillSearch}」に一致するスキルがありません
+                    </div>
+                  ) : filteredSkills.map((skill) => {
                     const selected = skills.includes(skill);
                     return (
                       <button
@@ -508,7 +563,7 @@ export default function ProjectRecruitPage() {
 
                 <button
                   type="button"
-                  onClick={() => setShowSkillPicker(false)}
+                  onClick={closeSkillPicker}
                   style={{
                     marginTop: 14,
                     width: "100%",
