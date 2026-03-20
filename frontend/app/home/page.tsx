@@ -100,9 +100,18 @@ export default function HomePage() {
       }
 
       try {
-        const prof = await fetchProfileAll();
-        if (!isMounted) return;
-        setProfileProjects(Array.isArray(prof.projects) ? prof.projects : []);
+        // Only fetch profile projects when a client-side access token exists
+        // This avoids unnecessary unauthenticated API calls from the Home page.
+        const token = typeof window !== "undefined" ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token")) : null;
+        if (token) {
+          const prof = await fetchProfileAll();
+          if (!isMounted) return;
+          setProfileProjects(Array.isArray(prof.projects) ? prof.projects : []);
+        } else {
+          // Not authenticated via token on client; keep empty list to avoid calling the API
+          if (!isMounted) return;
+          setProfileProjects([]);
+        }
       } catch {
         /* ignore */ }
     };
