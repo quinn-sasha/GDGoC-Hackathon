@@ -18,34 +18,45 @@ export default function LoginPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSubmitting(true);
     setErrorMessage("");
+    setFieldErrors({});
 
-    const formData = new FormData(event.currentTarget);
-    const payload = {
-      email: String(formData.get("email") ?? ""),
-      password: String(formData.get("password") ?? ""),
-      remember: formData.get("remember") === "on",
-    };
+    const form = event.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+    const remember = formData.get("remember") === "on";
 
+    const errs: { email?: string; password?: string } = {};
+    if (!email) errs.email = "メールアドレスを入力してください";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = "有効なメールアドレスを入力してください";
+    if (!password) errs.password = "パスワードを入力してください";
+    else if (password.length < 8) errs.password = "パスワードは8文字以上で入力してください";
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const payload = { email, password, remember };
     try {
       const result = await login(payload);
-
       if (!result.ok) {
         setErrorMessage(result.message);
         return;
       }
 
-      // Store tokens if returned (localStorage/sessionStorage)
-      // Use a safe access pattern to avoid TypeScript compile issues in build.
       const accessToken = (result as any)?.access as string | undefined;
       const refreshToken = (result as any)?.refresh as string | undefined;
       if (accessToken) {
         try {
-          if (payload.remember) {
+          if (remember) {
             localStorage.setItem("access_token", accessToken);
             if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
           } else {
@@ -70,7 +81,7 @@ export default function LoginPage() {
       <section className="login-card" aria-labelledby="login-title">
         <h1 id="login-title">アカウントにサインイン</h1>
 
-        <form className="login-form" onSubmit={handleSubmit}>
+        <form className="login-form" onSubmit={handleSubmit} noValidate>
           <label htmlFor="email">メールアドレス</label>
           <input
             id="email"
@@ -78,8 +89,14 @@ export default function LoginPage() {
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
-            required
+            aria-invalid={fieldErrors.email ? true : undefined}
+            aria-describedby={fieldErrors.email ? "email-error" : undefined}
           />
+          {fieldErrors.email && (
+            <div id="email-error" role="alert" style={{ color: "#ff8f8f", marginTop: 6, fontSize: "0.9rem" }}>
+              {fieldErrors.email}
+            </div>
+          )}
 
           <label htmlFor="password">パスワード</label>
           <input
@@ -91,8 +108,14 @@ export default function LoginPage() {
             minLength={8}
             maxLength={32}
             title="パスワードは8〜32文字で入力してください"
-            required
+            aria-invalid={fieldErrors.password ? true : undefined}
+            aria-describedby={fieldErrors.password ? "password-error" : undefined}
           />
+          {fieldErrors.password && (
+            <div id="password-error" role="alert" style={{ color: "#ff8f8f", marginTop: 6, fontSize: "0.9rem" }}>
+              {fieldErrors.password}
+            </div>
+          )}
 
           <div className="login-row">
             <label className="remember-wrap" htmlFor="remember">
