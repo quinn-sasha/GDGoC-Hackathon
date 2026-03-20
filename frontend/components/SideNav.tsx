@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import React from "react";
 
-export const SideNav = ({ active }: { active: "home" | "chat" | "profile" }) => {
+export const SideNav = ({ active }: { active: "home" | "chat" | "profile" | "myproject" }) => {
   const router = useRouter();
   return (
     <nav
@@ -34,6 +34,13 @@ export const SideNav = ({ active }: { active: "home" | "chat" | "profile" }) => 
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
         <span style={{ fontSize: "0.82rem", color: "#fff", fontWeight: 700 }}>チャット</span>
+      </button>
+      <button style={{ background: "none", border: "none", color: active === "myproject" ? "#fff" : "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 16, padding: "0 12px" }} onClick={() => router.push("/myproject") }>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 7h18v13H3z" />
+          <path d="M7 3h10v4H7z" />
+        </svg>
+        <span style={{ fontSize: "0.82rem", color: "#fff", fontWeight: 700 }}>マイプロジェクト</span>
       </button>
       <button style={{ background: "none", border: "none", color: active === "profile" ? "#fff" : "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 16, padding: "0 12px" }} onClick={() => router.push(`/profile/me`)}>
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
