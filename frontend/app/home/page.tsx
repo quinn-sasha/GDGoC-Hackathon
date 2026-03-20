@@ -383,7 +383,11 @@ export default function HomePage() {
                       <span style={{ fontSize: "0.78rem", color: "#aaaaaa" }}>{project.meta}</span>
                     </div>
                     <span style={{ fontSize: "0.7rem", color: "#fff", background: project.accent, borderRadius: 6, padding: "3px 8px" }}>{project.badge}</span>
-                    <button type="button" style={{ marginLeft: 8, borderRadius: 8, border: "none", background: "#8aff1d", color: "#111111", fontWeight: 700, fontSize: "0.85rem", padding: "7px 14px", cursor: "pointer" }} onClick={() => router.push(`/myproject/${encodeURIComponent(project.name)}`)}>
+                    <button
+                      type="button"
+                      style={{ marginLeft: 8, borderRadius: 8, border: "none", background: "#8aff1d", color: "#111111", fontWeight: 700, fontSize: "0.85rem", padding: "7px 14px", cursor: "pointer" }}
+                      onClick={() => router.push(project.id ? `/project/${project.id}` : `/myproject/${encodeURIComponent(project.name)}`)}
+                    >
                       開く
                     </button>
                   </div>
