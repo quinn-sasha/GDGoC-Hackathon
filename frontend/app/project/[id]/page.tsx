@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 
 import { buildProjectImage } from "@/lib/project-image";
 import { fetchProjectDetail, submitProjectApplication, fetchProjectApplications, deleteProject, type ProjectApplication } from "@/lib/project-api";
+import { sendMessage } from "@/lib/chat-client";
 import { fetchProfile } from "@/lib/profile-api";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
@@ -193,6 +194,14 @@ export default function ProjectDetailPage() {
       setIsSubmitted(true);
       if (result.chatroom_id) {
         setChatId(result.chatroom_id);
+        // 応募メッセージをチャットにも送信して、メッセージ画面に反映されるようにする
+        try {
+          await sendMessage(String(result.chatroom_id), message.trim());
+        } catch (e) {
+          // 送信失敗は致命的ではないのでログに出して無視
+          // eslint-disable-next-line no-console
+          console.warn("応募メッセージのチャット送信に失敗しました", e);
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "応募の送信に失敗しました。";
