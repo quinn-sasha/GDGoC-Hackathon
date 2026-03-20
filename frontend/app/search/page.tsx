@@ -3,10 +3,12 @@ import React from "react";
 import SearchClient from "@/components/SearchClient";
 
 type Props = {
-  searchParams?: { q?: string };
+  // searchParams may be a Promise in Next.js 15; accept either shape
+  searchParams?: { q?: string } | Promise<{ q?: string }>;
 };
 
-export default function SearchPage({ searchParams }: Props) {
-  const q = searchParams?.q ?? "";
+export default async function SearchPage({ searchParams }: Props) {
+  const { q: query } = (await searchParams) ?? {};
+  const q = query ?? "";
   return <SearchClient initialQuery={q} />;
 }
