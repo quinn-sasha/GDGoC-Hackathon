@@ -11,6 +11,16 @@ function getAuthHeaders(): Record<string, string> {
   return headers;
 }
 
+export async function fetchAvailableSkills(): Promise<{ id: number; name: string }[]> {
+  const response = await fetch(`${baseUrl}/api/profile/skills/`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("スキル一覧の取得に失敗しました");
+  return await response.json();
+}
+
 export async function fetchProjects() {
   const response = await fetch(`${baseUrl}/api/projects/`, {
     method: "GET",

@@ -5,36 +5,13 @@ import { useState, useEffect, type FormEvent } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
 import { isMobileUA } from "@/lib/device";
-import { createProject, uploadProjectImage } from "@/lib/project-api";
+import { createProject, uploadProjectImage, fetchAvailableSkills } from "@/lib/project-api";
 import { buildProjectImage } from "@/lib/project-image";
 
 const STATUS_OPTIONS = [
   { value: "opening", label: "開始前" },
   { value: "ongoing", label: "進行中" },
   { value: "completed", label: "完了" },
-];
-
-const PRESET_SKILLS = [
-  "react",
-  "typescript",
-  "node.js",
-  "python",
-  "django",
-  "figma",
-  "flutter",
-  "firebase",
-  "aws",
-  "next.js",
-  "go",
-  "docker",
-  "postgresql",
-  "supabase",
-  "tailwindcss",
-  "graphql",
-  "unity",
-  "blender",
-  "tensorflow",
-  "pytorch",
 ];
 
 const TITLE_MAX = 50;
@@ -55,6 +32,7 @@ export default function ProjectRecruitPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPC, setIsPC] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
 
   const trimmedTitle = title.trim();
   const trimmedDescription = description.trim();
@@ -74,6 +52,9 @@ export default function ProjectRecruitPage() {
     update();
     setMounted(true);
     window.addEventListener("resize", update);
+    fetchAvailableSkills()
+      .then((skills) => setAvailableSkills(skills.map((s) => s.name)))
+      .catch(() => {});
     return () => window.removeEventListener("resize", update);
   }, [router]);
 
@@ -496,7 +477,11 @@ export default function ProjectRecruitPage() {
                     paddingRight: 2,
                   }}
                 >
-                  {PRESET_SKILLS.map((skill) => {
+                  {availableSkills.length === 0 ? (
+                    <div style={{ gridColumn: "1 / -1", textAlign: "center", color: "#8b8b8b", padding: "20px 0", fontSize: "0.85rem" }}>
+                      読み込み中...
+                    </div>
+                  ) : availableSkills.map((skill) => {
                     const selected = skills.includes(skill);
                     return (
                       <button
