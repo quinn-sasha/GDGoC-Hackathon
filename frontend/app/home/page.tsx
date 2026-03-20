@@ -250,7 +250,7 @@ export default function HomePage() {
         {fetchError ? <div style={{ color: "#b3b3b3", fontSize: "0.88rem", margin: "8px 20px" }}>{fetchError}</div> : null}
 
         <section style={S.section}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>おすすめ</h2>
+          <h2 style={{ margin: 5, fontSize: 22 }}>おすすめ</h2>
           <div
             ref={recommendedRailRef}
             style={S.recommendedRail}
@@ -309,7 +309,7 @@ export default function HomePage() {
 
         <section ref={updatesSectionRef} style={S.section}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <h3 style={{ margin: 0, fontSize: 16 }}>{isSearchMode ? "検索結果" : showAllUpdates ? "最近の更新プロジェクト" : "最新の更新"}</h3>
+            <h3 style={{ margin: 5, fontSize: 22 }}>{isSearchMode ? "検索結果" : showAllUpdates ? "最近の更新プロジェクト" : "最新の更新"}</h3>
             {showAllUpdates && !isSearchMode ? (
               <button type="button" style={{ ...S.viewAll, background: "none", border: "none", cursor: "pointer" }} onClick={handleCloseAllUpdates}>
                 閉じる
@@ -357,7 +357,7 @@ export default function HomePage() {
 
         <section style={{ ...S.section, marginBottom: isPC ? 160 : 240 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <h3 style={{ margin: 0, fontSize: 16 }}>参加中のプロジェクト</h3>
+            <h3 style={{ margin: 5, fontSize: 22 }}>参加中のプロジェクト</h3>
             <a style={S.viewAll}>もっと見る</a>
           </div>
           {profileProjects.length === 0 ? (
