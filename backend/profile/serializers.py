@@ -17,6 +17,7 @@ class TechSkillSerializer(serializers.ModelSerializer):
 
 class MyProfileSerializer(serializers.ModelSerializer):
     """自分のプロフィール（email を含む）"""
+
     skills = serializers.SerializerMethodField()
     projects = serializers.SerializerMethodField()
     skill_ids = serializers.PrimaryKeyRelatedField(
@@ -54,6 +55,7 @@ class MyProfileSerializer(serializers.ModelSerializer):
     def get_projects(self, obj):
         # Avoid top-level import to prevent potential circular imports
         from project.serializers import ProjectListSerializer
+
         # Include projects the user owns plus projects where the user
         # has an accepted application (i.e. is a participant).
         from project.models import Project, Application
@@ -76,10 +78,9 @@ class MyProfileSerializer(serializers.ModelSerializer):
                 TechSkill.objects.get_or_create(name=ps.name)[0]
                 for ps in project_skills
             ]
-            UserSkill.objects.bulk_create([
-                UserSkill(user=instance, skill=skill)
-                for skill in profile_skills
-            ])
+            UserSkill.objects.bulk_create(
+                [UserSkill(user=instance, skill=skill) for skill in profile_skills]
+            )
         return instance
 
 

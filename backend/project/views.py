@@ -200,8 +200,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 {"detail": "image フィールドにファイルを添付してください。"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        from config.gcs import upload_image as gcs_upload, build_project_image_path, validate_image_file
+        from config.gcs import (
+            upload_image as gcs_upload,
+            build_project_image_path,
+            validate_image_file,
+        )
         from rest_framework.exceptions import ValidationError as DRFValidationError
+
         try:
             validate_image_file(file)
         except DRFValidationError as e:
@@ -246,7 +251,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     @extend_schema(
         summary="推薦プロジェクト一覧取得",
         description="ユーザーのスキルやトレンドに合わせたプロジェクトを優先度順（スキルマッチ > 人気 > 新着）のフラットなリストとして返します。",
-        responses={200: ProjectListSerializer(many=True)}
+        responses={200: ProjectListSerializer(many=True)},
     )
     def list(self, request, *args, **kwargs):
         MAX_ITEMS_PER_CATEGORY = 10
@@ -255,17 +260,21 @@ class ProjectViewSet(viewsets.ModelViewSet):
         unique_ids = set()
         # Skill Match
         if request.user.is_authenticated:
-            user_skill_names = [name.strip().lower() for name in request.user.skills.values_list("name", flat=True)]
+            user_skill_names = [
+                name.strip().lower()
+                for name in request.user.skills.values_list("name", flat=True)
+            ]
             if user_skill_names:
                 skill_matching_projects = list(
-                    base_queryset
-                    .annotate(
-                        skill_match_count=Count("technologies", filter=Q(technologies__name__in=user_skill_names))
+                    base_queryset.annotate(
+                        skill_match_count=Count(
+                            "technologies",
+                            filter=Q(technologies__name__in=user_skill_names),
+                        )
                     )
                     .filter(skill_match_count__gt=0)
                     .order_by("-skill_match_count", "-updated_at")
-                    .distinct()
-                    [:MAX_ITEMS_PER_CATEGORY]
+                    .distinct()[:MAX_ITEMS_PER_CATEGORY]
                 )
                 recommended_projects.extend(skill_matching_projects)
                 unique_ids |= {p.id for p in skill_matching_projects}
@@ -273,21 +282,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
         POPULAR_DAYS_LIMIT = 14
         since = timezone.now() - timedelta(days=POPULAR_DAYS_LIMIT)
         popular_projects = list(
-            base_queryset
-            .exclude(id__in=unique_ids)
+            base_queryset.exclude(id__in=unique_ids)
             .filter(updated_at__gte=since)
             .annotate(popularity_score=Count("saved_by_users"))
-            .order_by("-popularity_score", "-updated_at")
-            [:MAX_ITEMS_PER_CATEGORY]
+            .order_by("-popularity_score", "-updated_at")[:MAX_ITEMS_PER_CATEGORY]
         )
         recommended_projects.extend(popular_projects)
         unique_ids |= {p.id for p in popular_projects}
         # Recent Projects
         recent_projects = list(
-            base_queryset
-            .exclude(id__in=unique_ids)
-            .order_by("-updated_at")
-            [:MAX_ITEMS_PER_CATEGORY]
+            base_queryset.exclude(id__in=unique_ids).order_by("-updated_at")[
+                :MAX_ITEMS_PER_CATEGORY
+            ]
         )
         recommended_projects.extend(recent_projects)
 

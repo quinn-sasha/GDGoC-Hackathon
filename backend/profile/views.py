@@ -41,10 +41,8 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
         return super().patch(request, *args, **kwargs)
 
     def get_object(self):
-        return (
-            self.request.user.__class__.objects
-            .prefetch_related("skills")
-            .get(pk=self.request.user.pk)
+        return self.request.user.__class__.objects.prefetch_related("skills").get(
+            pk=self.request.user.pk
         )
 
 
@@ -86,8 +84,13 @@ class UploadIconView(APIView):
                 {"detail": "image フィールドにファイルを添付してください。"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        from config.gcs import upload_image as gcs_upload, build_user_icon_path, validate_image_file
+        from config.gcs import (
+            upload_image as gcs_upload,
+            build_user_icon_path,
+            validate_image_file,
+        )
         from rest_framework.exceptions import ValidationError as DRFValidationError
+
         try:
             validate_image_file(file)
         except DRFValidationError as e:

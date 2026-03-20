@@ -8,8 +8,10 @@ from django.contrib.auth.models import (
 )
 from django.db import models
 
+
 class UserManager(BaseUserManager):
     """カスタムユーザーマネージャー（email で認証）"""
+
     def create_user(self, email, username, password=None, **extra_fields):
         if not email:
             raise ValueError("メールアドレスは必須です")
@@ -32,9 +34,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     username = models.CharField(max_length=30, unique=True)
     email = models.EmailField("メールアドレス", unique=True)
-    profile_bio = models.CharField("プロフィール文", max_length=160, blank=True, default="")
+    profile_bio = models.CharField(
+        "プロフィール文", max_length=160, blank=True, default=""
+    )
     github_url = models.URLField("GitHub URL", max_length=255, blank=True, default="")
-    icon_image_path = models.CharField("アイコン画像パス", max_length=255, blank=True, default="")
+    icon_image_path = models.CharField(
+        "アイコン画像パス", max_length=255, blank=True, default=""
+    )
     skills = models.ManyToManyField(
         "profile.TechSkill",
         through="profile.UserSkill",
@@ -64,6 +70,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class EmailVerificationToken(models.Model):
     """メール確認トークン（有効期限 24時間）"""
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -84,4 +91,5 @@ class EmailVerificationToken(models.Model):
         """トークンが 24時間以内かどうかを確認する"""
         from datetime import timedelta
         from django.utils import timezone
+
         return timezone.now() < self.created_at + timedelta(hours=24)

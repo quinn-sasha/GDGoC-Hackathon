@@ -49,7 +49,9 @@ class MyProfileViewTests(APITestCase):
         skill1 = TechSkill.objects.create(name="Python")
         skill2 = TechSkill.objects.create(name="Django")
 
-        response = self.client.patch(self.url, {"skill_ids": [skill1.id, skill2.id]}, format="json")
+        response = self.client.patch(
+            self.url, {"skill_ids": [skill1.id, skill2.id]}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.user.skills.count(), 2)
 

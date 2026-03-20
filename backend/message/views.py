@@ -77,9 +77,9 @@ def _annotate_conversations(queryset, user):
         # _my_last_read_id は内部実装用アノテーション。serializer から直接アクセスしないこと。
         .annotate(
             _my_last_read_id=Subquery(
-                ChatroomUser.objects.filter(
-                    chatroom=OuterRef("pk"), user=user
-                ).values("last_read_message_id")[:1]
+                ChatroomUser.objects.filter(chatroom=OuterRef("pk"), user=user).values(
+                    "last_read_message_id"
+                )[:1]
             )
         )
         # Step 2: last_message フィールドと unread_count をアノテート
@@ -216,16 +216,24 @@ class ConversationViewSet(viewsets.ViewSet):
         try:
             chatroom = Chatroom.objects.get(pk=pk)
         except Chatroom.DoesNotExist:
-            return None, None, Response(
-                {"detail": "チャットルームが見つかりません。"},
-                status=status.HTTP_404_NOT_FOUND,
+            return (
+                None,
+                None,
+                Response(
+                    {"detail": "チャットルームが見つかりません。"},
+                    status=status.HTTP_404_NOT_FOUND,
+                ),
             )
         try:
             membership = chatroom.members.get(user=user)
         except ChatroomUser.DoesNotExist:
-            return None, None, Response(
-                {"detail": "このチャットルームへのアクセス権限がありません。"},
-                status=status.HTTP_403_FORBIDDEN,
+            return (
+                None,
+                None,
+                Response(
+                    {"detail": "このチャットルームへのアクセス権限がありません。"},
+                    status=status.HTTP_403_FORBIDDEN,
+                ),
             )
         return chatroom, membership, None
 
@@ -261,7 +269,9 @@ class ConversationViewSet(viewsets.ViewSet):
             404: OpenApiResponse(description="チャットルームが見つかりません"),
         },
     )
-    @action(detail=True, methods=["get", "post"], url_path="messages", url_name="messages")
+    @action(
+        detail=True, methods=["get", "post"], url_path="messages", url_name="messages"
+    )
     def messages(self, request, pk=None):
         chatroom, _, err = self._get_chatroom_for_member(pk, request.user)
         if err:

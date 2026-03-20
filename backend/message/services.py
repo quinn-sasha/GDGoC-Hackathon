@@ -31,7 +31,9 @@ def get_or_create_personal_chatroom(user_a, user_b):
     # 新規作成（PersonalChatroom の unique_together が競合時の安全弁）
     try:
         with transaction.atomic():
-            chatroom = Chatroom.objects.create(room_type=Chatroom.RoomType.PERSONAL_CHAT)
+            chatroom = Chatroom.objects.create(
+                room_type=Chatroom.RoomType.PERSONAL_CHAT
+            )
             ChatroomUser.objects.create(chatroom=chatroom, user=user_a)
             ChatroomUser.objects.create(chatroom=chatroom, user=user_b)
             PersonalChatroom.objects.create(
