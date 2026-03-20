@@ -20,6 +20,7 @@ export default function ProfileEditPage() {
   const [githubUrl, setGithubUrl] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
   const [allSkills, setAllSkills] = useState<Skill[]>([]);
+  const [skillsFailed, setSkillsFailed] = useState(false);
   const [avatarInitial, setAvatarInitial] = useState("?");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -54,11 +55,17 @@ export default function ProfileEditPage() {
         setAvatarInitial((profile.username?.[0] ?? "?").toUpperCase());
         if (profile.icon_image_path) setAvatarPreview(profile.icon_image_path);
         setAllSkills(skills);
+        setSkillsFailed(false);
         const profileSkillIds = new Set((profile.skills ?? []).map((s: Skill) => s.id));
         setSelectedSkills(skills.filter((s: Skill) => profileSkillIds.has(s.id)));
       })
       .catch(() => {
-        fetchSkills().then(setAllSkills).catch(() => {});
+        fetchSkills()
+          .then((skills) => {
+            setAllSkills(skills);
+            setSkillsFailed(false);
+          })
+          .catch(() => setSkillsFailed(true));
       })
       .finally(() => setProfileLoading(false));
   }, []);
@@ -307,6 +314,8 @@ export default function ProfileEditPage() {
                     setSelectedSkills={setSelectedSkills}
                     setShowPicker={setShowPicker}
                     allSkills={allSkills}
+                    skillsFailed={skillsFailed}
+                    profileLoading={profileLoading}
                   />
                 </div>
               )}
@@ -377,6 +386,8 @@ export default function ProfileEditPage() {
                   setSelectedSkills={setSelectedSkills}
                   setShowPicker={setShowPicker}
                   allSkills={allSkills}
+                  skillsFailed={skillsFailed}
+                  profileLoading={profileLoading}
                 />
               )}
 
@@ -569,12 +580,16 @@ function SkillSection({
   setSelectedSkills,
   setShowPicker,
   allSkills,
+  skillsFailed,
+  profileLoading,
 }: {
   labelStyle: React.CSSProperties;
   selectedSkills: Skill[];
   setSelectedSkills: React.Dispatch<React.SetStateAction<Skill[]>>;
   setShowPicker: React.Dispatch<React.SetStateAction<boolean>>;
   allSkills: Skill[];
+  skillsFailed: boolean;
+  profileLoading: boolean;
 }) {
   return (
     <div>
@@ -621,7 +636,13 @@ function SkillSection({
           padding: "11px 0", cursor: "pointer",
         }}
       >
-        {allSkills.length === 0 ? "読み込み中..." : "スキルを選択"}
+        {skillsFailed
+          ? "読み込みに失敗しました"
+          : profileLoading
+          ? "読み込み中..."
+          : allSkills.length === 0
+          ? "スキルがありません"
+          : "スキルを選択"}
       </button>
     </div>
   );
