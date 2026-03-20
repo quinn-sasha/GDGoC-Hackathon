@@ -247,7 +247,7 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: "100vh", background: "#111111", color: "#ffffff", paddingLeft: isPC ? 100 : 0 }}>
       {NavBarElement}
-      <CommonHeader title="ホーム" isPC={isPC} />
+      <CommonHeader title="" isPC={isPC} />
       <main style={{ padding: 12, paddingBottom: isPC ? 140 : 200 }}>
         <CommonSearchBar
           value={search}

@@ -17,7 +17,7 @@ export const CommonHeader = ({ title, right, left, isPC }: {
     }}
   >
     {left || <div />}
-    <h1 style={{ margin: 0, fontSize: isPC ? "2rem" : "1.75rem", fontWeight: 800 }}>{title}</h1>
+    {title ? <h1 style={{ margin: 0, fontSize: isPC ? "2rem" : "1.75rem", fontWeight: 800 }}>{title}</h1> : <div />}
     {right || <div />}
   </header>
 );

@@ -149,7 +149,7 @@ export async function fetchProjectApplications(projectId: string): Promise<Proje
     headers: getAuthHeaders(),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error("応募者一覧の取得に失敗しました");
+  if (!response.ok) throw new Error("参加申請一覧の取得に失敗しました");
   return await response.json();
 }
 
@@ -173,7 +173,7 @@ export async function submitProjectApplication({
   });
   if (!response.ok) {
     if (response.status === 401) throw new Error("ログインが必要です。再度ログインしてください。");
-    let detail = "応募の送信に失敗しました";
+    let detail = "参加申請の送信に失敗しました";
     try {
       const err = await response.json();
       if (err.detail) detail = String(err.detail);

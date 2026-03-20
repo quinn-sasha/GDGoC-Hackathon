@@ -86,7 +86,7 @@ export function createApplicationChatThread(input: ApplicationChatInput) {
   const nextId = existingThread
     ? existingThread.id
     : getAllChatThreads().reduce((maxId, thread) => Math.max(maxId, thread.id), 0) + 1;
-  const replyText = `応募ありがとうございます。${input.role}の件、このチャットで詳細を進めましょう。`;
+  const replyText = `参加申請ありがとうございます。${input.role}の件、このチャットで詳細を進めましょう。`;
 
   const nextThread: ChatThread = {
     id: nextId,
