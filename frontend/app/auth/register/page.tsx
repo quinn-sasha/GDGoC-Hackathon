@@ -19,26 +19,36 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; username?: string; password?: string; passwordConfirm?: string }>({});
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSubmitting(true);
     setErrorMessage("");
     setSuccessMessage("");
-    // Save form reference because the synthetic event may be released after awaits
-    const form = event.currentTarget as HTMLFormElement | null;
-    const formData = new FormData(form ?? undefined);
+    setFieldErrors({});
+
+    const form = event.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
     const email = String(formData.get("email") ?? "").trim();
     const username = String(formData.get("username") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
 
-    if (password !== passwordConfirm) {
-      setErrorMessage("パスワードが一致しません。");
-      setIsSubmitting(false);
+    const errs: { email?: string; username?: string; password?: string; passwordConfirm?: string } = {};
+    if (!email) errs.email = "メールアドレスを入力してください";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = "有効なメールアドレスを入力してください";
+    if (!username) errs.username = "ユーザー名を入力してください";
+    else if (username.length < 3) errs.username = "ユーザー名は3文字以上で入力してください";
+    if (!password) errs.password = "パスワードを入力してください";
+    else if (password.length < 8) errs.password = "パスワードは8文字以上で入力してください";
+    if (password !== passwordConfirm) errs.passwordConfirm = "パスワードが一致しません";
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
       return;
     }
 
+    setIsSubmitting(true);
     const result = await register({ email, username, password });
 
     if (!result.ok) {
@@ -47,9 +57,7 @@ export default function RegisterPage() {
       return;
     }
 
-    setSuccessMessage(
-      "登録が完了しました。メールを確認してアカウント認証を行ってください。",
-    );
+    setSuccessMessage("登録が完了しました。メールを確認してアカウント認証を行ってください。");
     form?.reset();
     setIsSubmitting(false);
   };
@@ -63,7 +71,7 @@ export default function RegisterPage() {
           登録完了後に確認メールをお送りします。
         </p>
 
-        <form className="login-form" onSubmit={handleSubmit}>
+        <form className="login-form" onSubmit={handleSubmit} noValidate>
           <label htmlFor="email">メールアドレス</label>
           <input
             id="email"
@@ -71,8 +79,10 @@ export default function RegisterPage() {
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
-            required
+            aria-invalid={fieldErrors.email ? true : undefined}
+            aria-describedby={fieldErrors.email ? "email-error" : undefined}
           />
+          {fieldErrors.email && <div id="email-error" role="alert" style={{ color: "#ff8f8f", marginTop: 6 }}>{fieldErrors.email}</div>}
 
           <label htmlFor="username">ユーザー名</label>
           <input
@@ -83,8 +93,10 @@ export default function RegisterPage() {
             placeholder="your-name"
             minLength={3}
             maxLength={24}
-            required
+            aria-invalid={fieldErrors.username ? true : undefined}
+            aria-describedby={fieldErrors.username ? "username-error" : undefined}
           />
+          {fieldErrors.username && <div id="username-error" role="alert" style={{ color: "#ff8f8f", marginTop: 6 }}>{fieldErrors.username}</div>}
 
           <label htmlFor="password">パスワード</label>
           <input
@@ -95,8 +107,10 @@ export default function RegisterPage() {
             placeholder="8〜32文字"
             minLength={8}
             maxLength={32}
-            required
+            aria-invalid={fieldErrors.password ? true : undefined}
+            aria-describedby={fieldErrors.password ? "password-error" : undefined}
           />
+          {fieldErrors.password && <div id="password-error" role="alert" style={{ color: "#ff8f8f", marginTop: 6 }}>{fieldErrors.password}</div>}
 
           <label htmlFor="passwordConfirm">パスワード（確認）</label>
           <input
@@ -107,8 +121,10 @@ export default function RegisterPage() {
             placeholder="パスワードを再入力"
             minLength={8}
             maxLength={32}
-            required
+            aria-invalid={fieldErrors.passwordConfirm ? true : undefined}
+            aria-describedby={fieldErrors.passwordConfirm ? "passwordConfirm-error" : undefined}
           />
+          {fieldErrors.passwordConfirm && <div id="passwordConfirm-error" role="alert" style={{ color: "#ff8f8f", marginTop: 6 }}>{fieldErrors.passwordConfirm}</div>}
 
           <button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "登録中..." : "アカウントを作成"}

@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 import { buildProjectImage } from "@/lib/project-image";
-import { fetchProjectDetail, submitProjectApplication, fetchProjectApplications, type ProjectApplication } from "@/lib/project-api";
+import { fetchProjectDetail, submitProjectApplication, fetchProjectApplications, deleteProject, type ProjectApplication } from "@/lib/project-api";
 import { fetchProfile } from "@/lib/profile-api";
 import { BottomNav } from "@/components/BottomNav";
 import { SideNav } from "@/components/SideNav";
@@ -74,6 +74,8 @@ export default function ProjectDetailPage() {
   const [isAlreadyApplied, setIsAlreadyApplied] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
   const [applications, setApplications] = useState<ProjectApplication[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const [isPC, setIsPC] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -208,6 +210,44 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleDeleteProject = async () => {
+    if (!confirm("このプロジェクトを削除しますか？ この操作は取り消せません。")) return;
+    setIsDeleting(true);
+    try {
+      await deleteProject(String(project.id));
+      router.push("/home");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "削除に失敗しました");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.href : `/project/${project.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: project.title, url });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      } else {
+        // fallback
+        const tmp = document.createElement("textarea");
+        tmp.value = url;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand("copy");
+        document.body.removeChild(tmp);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      }
+    } catch {
+      alert("リンクの共有に失敗しました。");
+    }
+  };
+
   // 応募フォーム（PC・モバイル共通）
   const applicationForm = (
     <section
@@ -245,6 +285,20 @@ export default function ProjectDetailPage() {
               <p style={{ margin: "8px 0 0", color: "#c7c7c7", fontSize: "0.86rem", lineHeight: 1.6 }}>
                 応募が届いたらここに表示されます。
               </p>
+                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                    <button type="button" onClick={() => router.push(`/project/${projectId}/edit`)}
+                      style={{ flex: 1, borderRadius: 12, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ffffff", padding: "10px", cursor: "pointer" }}>
+                      募集を編集
+                    </button>
+                    <button type="button" onClick={handleShare}
+                      style={{ borderRadius: 12, border: "1px solid #2a2a2a", background: "#111111", color: "#d0d0d0", padding: "10px", cursor: "pointer" }}>
+                      {shareCopied ? "リンクをコピーしました" : "募集をシェア"}
+                    </button>
+                    <button type="button" onClick={handleDeleteProject} disabled={isDeleting}
+                      style={{ borderRadius: 12, border: "none", background: "#ff6b6b", color: "#111111", padding: "10px", cursor: "pointer" }}>
+                      削除
+                    </button>
+                  </div>
             </div>
           ) : (
             <div>
@@ -570,9 +624,34 @@ export default function ProjectDetailPage() {
                     {category && <span>カテゴリ: {category}</span>}
                   </div>
                 </div>
-                <span style={{ borderRadius: 999, background: statusStyle.bg, color: statusStyle.color, border: `1px solid ${statusStyle.bg}`, padding: "6px 12px", fontSize: "0.76rem", fontWeight: 700, letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
-                  {translateStatus(project.progress_status)}
-                </span>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+                  <span style={{ borderRadius: 999, background: statusStyle.bg, color: statusStyle.color, border: `1px solid ${statusStyle.bg}`, padding: "6px 12px", fontSize: "0.76rem", fontWeight: 700, letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+                    {translateStatus(project.progress_status)}
+                  </span>
+                  {isOwner && (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button type="button" onClick={() => router.push(`/project/${projectId}/edit`)}
+                        style={{ borderRadius: 10, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ffffff", padding: "6px 10px", cursor: "pointer" }}>
+                        編集
+                      </button>
+                      <button type="button" onClick={handleDeleteProject} disabled={isDeleting}
+                        style={{ borderRadius: 10, border: "none", background: "#ff6b6b", color: "#111111", padding: "6px 10px", cursor: "pointer" }}>
+                        {isDeleting ? "削除中..." : "削除"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 統計行 */}
+              <div style={{ display: "flex", gap: 10, marginTop: 12, alignItems: "center", color: "#bdbdbd", fontSize: "0.85rem" }}>
+                <span style={{ background: "#111111", border: "1px solid #222222", padding: "6px 10px", borderRadius: 999 }}>保存数: {project.num_saved ?? 0}</span>
+                {isOwner ? (
+                  <span style={{ background: "#111111", border: "1px solid #222222", padding: "6px 10px", borderRadius: 999 }}>応募数: {applications.length}</span>
+                ) : (
+                  <></>
+                )}
+                <span style={{ background: "#111111", border: "1px solid #222222", padding: "6px 10px", borderRadius: 999 }}>更新: {new Date(project.updated_at).toLocaleDateString("ja-JP")}</span>
               </div>
 
               <div style={{ marginTop: 24 }}>

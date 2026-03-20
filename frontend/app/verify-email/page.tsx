@@ -31,9 +31,18 @@ export default function VerifyEmailPage() {
     setIsSubmitting(true);
     setErrorMessage("");
     setSuccessMessage("");
-
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
     const token = String(formData.get("token") ?? "").trim();
+
+    const errs: { token?: string } = {};
+    if (!token) errs.token = "認証トークンを入力してください";
+    else if (token.length < 6) errs.token = "トークンは6文字以上で入力してください";
+    if (Object.keys(errs).length > 0) {
+      setErrorMessage(errs.token ?? "入力エラーがあります");
+      setIsSubmitting(false);
+      return;
+    }
 
     const result = await verifyEmail({ token });
 
@@ -69,7 +78,7 @@ export default function VerifyEmailPage() {
           認証トークンを入力するか、メールのリンクからこのページを開いてください。
         </p>
 
-        <form className="login-form" onSubmit={handleSubmit}>
+        <form className="login-form" onSubmit={handleSubmit} noValidate>
           <label htmlFor="token">認証トークン</label>
           <input
             id="token"

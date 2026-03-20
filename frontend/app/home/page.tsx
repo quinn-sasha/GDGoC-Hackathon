@@ -362,23 +362,38 @@ export default function HomePage() {
             <h3 style={{ margin: 0, fontSize: 16 }}>参加中のプロジェクト</h3>
             <a style={S.viewAll}>もっと見る</a>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {profileProjects.slice(0, 3).map((project: any) => (
-              <article key={project.name} style={{ ...S.card, borderLeft: `6px solid ${project.accent}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-                  <div style={{ ...S.avatarSm, background: project.accent }}>{project.initial}</div>
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#fff" }}>{project.name}</h4>
-                    <span style={{ fontSize: "0.78rem", color: "#aaaaaa" }}>{project.meta}</span>
+          {profileProjects.length === 0 ? (
+            <div style={{ ...S.card, textAlign: "center", padding: 24 }}>
+              <p style={{ margin: 0, color: "#c7c7c7", fontSize: "0.96rem" }}>まだ参加中のプロジェクトがありません。</p>
+              <p style={{ margin: "8px 0 16px", color: "#9a9a9a", fontSize: "0.86rem" }}>関心のあるプロジェクトを探して参加したり、新しく募集を作成してみましょう。</p>
+              <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 6 }}>
+                <button type="button" onClick={() => router.push("/search")} style={{ padding: "10px 14px", borderRadius: 12, border: "none", background: "#8aff1d", color: "#111111", fontWeight: 800, cursor: "pointer" }}>
+                  プロジェクトを探す
+                </button>
+                <button type="button" onClick={() => router.push("/project/recruit")} style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid #2a2a2a", background: "#111111", color: "#d0d0d0", cursor: "pointer" }}>
+                  募集を作成
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {profileProjects.slice(0, 3).map((project: any) => (
+                <article key={project.name} style={{ ...S.card, borderLeft: `6px solid ${project.accent}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+                    <div style={{ ...S.avatarSm, background: project.accent }}>{project.initial}</div>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#fff" }}>{project.name}</h4>
+                      <span style={{ fontSize: "0.78rem", color: "#aaaaaa" }}>{project.meta}</span>
+                    </div>
+                    <span style={{ fontSize: "0.7rem", color: "#fff", background: project.accent, borderRadius: 6, padding: "3px 8px" }}>{project.badge}</span>
+                    <button type="button" style={{ marginLeft: 8, borderRadius: 8, border: "none", background: "#8aff1d", color: "#111111", fontWeight: 700, fontSize: "0.85rem", padding: "7px 14px", cursor: "pointer" }} onClick={() => router.push(`/myproject/${encodeURIComponent(project.name)}`)}>
+                      開く
+                    </button>
                   </div>
-                  <span style={{ fontSize: "0.7rem", color: "#fff", background: project.accent, borderRadius: 6, padding: "3px 8px" }}>{project.badge}</span>
-                  <button type="button" style={{ marginLeft: 8, borderRadius: 8, border: "none", background: "#8aff1d", color: "#111111", fontWeight: 700, fontSize: "0.85rem", padding: "7px 14px", cursor: "pointer" }} onClick={() => router.push(`/myproject/${encodeURIComponent(project.name)}`)}>
-                    開く
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <button type="button" style={S.createFab(!isPC)} onClick={() => router.push("/project/recruit")} aria-label="プロジェクト募集を作成">

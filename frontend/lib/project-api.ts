@@ -80,6 +80,46 @@ export async function uploadProjectImage(projectId: string, file: File): Promise
   return data.project_image_path as string;
 }
 
+export async function updateProject(projectId: string, data: {
+  title?: string;
+  description?: string;
+  progress_status?: string;
+  technologies?: string[];
+}) {
+  const response = await fetch(`${baseUrl}/api/projects/${projectId}/`, {
+    method: "PATCH",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("ログインが必要です。再度ログインしてください。");
+    let detail = "プロジェクトの更新に失敗しました";
+    try {
+      const err = await response.json();
+      if (err.detail) detail = String(err.detail);
+    } catch { /* ignore */ }
+    throw new Error(detail);
+  }
+  return await response.json();
+}
+
+export async function deleteProject(projectId: string) {
+  const response = await fetch(`${baseUrl}/api/projects/${projectId}/`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("ログインが必要です。再度ログインしてください。");
+    let detail = "プロジェクトの削除に失敗しました";
+    try {
+      const err = await response.json();
+      if (err.detail) detail = String(err.detail);
+    } catch { /* ignore */ }
+    throw new Error(detail);
+  }
+  return true;
+}
+
 export type ProjectApplication = {
   id: string;
   applicant_id: number;
