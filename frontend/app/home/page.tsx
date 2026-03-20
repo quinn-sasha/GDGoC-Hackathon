@@ -151,7 +151,7 @@ export default function HomePage() {
     };
     const updateProjects = updates
       .filter((item) => item.id !== featured?.id)
-      .slice(0, 2)
+      .slice(0, 8)
       .map((item) => ({
         id: item.id,
         title: item.title,
