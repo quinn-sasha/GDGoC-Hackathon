@@ -6,6 +6,8 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from project.models import TechSkill as ProjectTechSkill
+
 from .models import TechSkill
 from .serializers import MyProfileSerializer, TechSkillSerializer, UserProfileSerializer
 
@@ -52,7 +54,7 @@ class TechSkillListView(generics.ListAPIView):
 
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TechSkillSerializer
-    queryset = TechSkill.objects.all().order_by("name")
+    queryset = ProjectTechSkill.objects.all().order_by("name")
 
     @extend_schema(
         summary="技術スキル一覧を取得",

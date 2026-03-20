@@ -1,15 +1,18 @@
 const BASE =
   process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
 
-// JWTペイロードから自分のuser_idを取得
-export function getMyUserId(): number | null {
+// JWTペイロードから自分のuser_idを取得（UUID文字列 or 数値どちらも対応）
+export function getMyUserId(): string | null {
   if (typeof window === "undefined") return null;
   const token =
     sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token");
   if (!token) return null;
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-    return typeof payload.user_id === "number" ? payload.user_id : null;
+    const uid = payload.user_id;
+    if (typeof uid === "string" && uid.length > 0) return uid;
+    if (typeof uid === "number") return String(uid);
+    return null;
   } catch {
     return null;
   }
@@ -26,7 +29,7 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 export type ConversationOtherUser = {
-  id: number;
+  id: string;
   username: string;
   icon_image_path: string;
 };
@@ -59,7 +62,7 @@ export type PaginatedConversations = {
 export type ChatMessage = {
   id: string; // UUID
   sender: {
-    id: number;
+    id: string; // UUID
     username: string;
     icon_image_path: string;
   };
@@ -147,7 +150,7 @@ export async function fetchConversationById(id: string): Promise<Conversation | 
 }
 
 // 個人チャットを作成（既存の場合はそれを返す）
-export async function createConversation(userId: number): Promise<Conversation> {
+export async function createConversation(userId: string): Promise<Conversation> {
   const res = await fetch(`${BASE}/api/conversations/`, {
     method: "POST",
     headers: getAuthHeaders(),
