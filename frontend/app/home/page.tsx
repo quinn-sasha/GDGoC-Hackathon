@@ -374,7 +374,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {profileProjects.slice(0, 3).map((project: any) => {
+              {profileProjects.map((project: any) => {
                 const statusLabel: Record<string, string> = { opening: "開始前", ongoing: "進行中", completed: "完了" };
                 const statusColor: Record<string, string> = { opening: "#6699ff", ongoing: "#4fc3a1", completed: "#cc9944" };
                 const color = statusColor[project.progress_status] ?? "#8aff1d";
