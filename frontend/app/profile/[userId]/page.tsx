@@ -151,6 +151,15 @@ export default function UserProfilePage() {
             ))}
           </div>
         )}
+        <div style={{ marginTop: 20, textAlign: "center" }}>
+          <button
+            type="button"
+            onClick={() => router.push(String(userId) === "me" ? "/myproject" : `/profile/${userId}/projects`)}
+            style={{ borderRadius: 8, padding: "8px 12px", background: "#8aff1d", color: "#111", fontWeight: 700, border: "none", cursor: "pointer" }}
+          >
+            {String(userId) === "me" ? "マイプロジェクトを開く" : "プロジェクトを見る"}
+          </button>
+        </div>
       </section>
       {isPC ? null : <BottomNav active="profile" />}
     </main>
