@@ -30,4 +30,6 @@ class Migration(migrations.Migration):
         ("project", "0005_application_add_fields"),
     ]
 
-    operations = []
+    operations = [
+        migrations.RunPython(add_tech_categories, reverse_code=remove_tech_categories),
+    ]
