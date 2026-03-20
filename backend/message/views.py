@@ -150,6 +150,9 @@ class ConversationViewSet(viewsets.ViewSet):
         )
         return paginator.get_paginated_response(serializer.data)
 
+    def retrieve(self, request, pk=None):
+        return self._chatroom_response(pk, request, status.HTTP_200_OK)
+
     def _chatroom_response(self, chatroom_id, request, http_status):
         """単一チャットルームを annotate してシリアライズし Response を返すヘルパー。"""
         obj = _annotate_conversations(

@@ -31,12 +31,13 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "drf_spectacular",
+    "django_filters",
     # ローカル
     "accounts",
-    "home",
     "project",
     "profile",
     "message",
+    "search",
 ]
 
 MIDDLEWARE = [

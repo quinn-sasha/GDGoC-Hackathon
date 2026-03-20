@@ -1,5 +1,7 @@
 const BASE =
   process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
+const BASE =
+  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
 
 // JWTペイロードから自分のuser_idを取得
 export function getMyUserId(): number | null {
@@ -128,3 +130,4 @@ export async function createConversation(userId: number): Promise<Conversation> 
   if (!res.ok) throw new Error("チャットの作成に失敗しました");
   return res.json();
 }
+>>>>>>> origin/main

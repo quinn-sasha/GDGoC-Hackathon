@@ -4,11 +4,6 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-
-def generate_uuid7():
-    return uuid6.uuid7()
-
-
 # ==========================================
 # Master Models
 # ==========================================
@@ -60,7 +55,7 @@ class Project(models.Model):
         ONGOING = "ongoing", _("進行中")
         FINISHED = "completed", _("完了")
 
-    id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     owner = models.ForeignKey(
         # オーナーが退会したら、作成したプロジェクトは消去される
         settings.AUTH_USER_MODEL,
@@ -103,7 +98,7 @@ class Project(models.Model):
 
 # Don't need related name in join tables
 class ProjectTechnology(models.Model):
-    id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     technology = models.ForeignKey(TechSkill, on_delete=models.CASCADE)
 
@@ -112,7 +107,7 @@ class ProjectTechnology(models.Model):
 
 
 class ProjectCategory(models.Model):
-    id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     category = models.ForeignKey(TechCategory, on_delete=models.CASCADE)
 
@@ -121,7 +116,7 @@ class ProjectCategory(models.Model):
 
 
 class ProjectVibe(models.Model):
-    id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     vibe_tag = models.ForeignKey(VibeTag, on_delete=models.CASCADE)
 
@@ -130,7 +125,7 @@ class ProjectVibe(models.Model):
 
 
 class SavedProject(models.Model):
-    id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -150,7 +145,7 @@ class Application(models.Model):
         ACCEPTED = "accepted", "承認済み"
         REJECTED = "rejected", "却下"
 
-    id = models.UUIDField(primary_key=True, default=generate_uuid7, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
