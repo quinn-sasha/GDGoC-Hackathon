@@ -75,7 +75,7 @@ export type PaginatedMessages = {
 
 // 会話一覧取得
 export async function fetchConversations(): Promise<PaginatedConversations> {
-  const res = await fetch(`${BASE}/api/conversations/`, {
+  const res = await fetch(`${BASE}/api/message/conversations/`, {
     headers: getAuthHeaders(),
     cache: "no-store",
     credentials: "include",
@@ -86,7 +86,7 @@ export async function fetchConversations(): Promise<PaginatedConversations> {
 
 // メッセージ一覧取得
 export async function fetchMessages(conversationId: string): Promise<PaginatedMessages> {
-  const res = await fetch(`${BASE}/api/conversations/${conversationId}/messages/`, {
+  const res = await fetch(`${BASE}/api/message/conversations/${conversationId}/messages/`, {
     headers: getAuthHeaders(),
     cache: "no-store",
     credentials: "include",
@@ -97,7 +97,7 @@ export async function fetchMessages(conversationId: string): Promise<PaginatedMe
 
 // メッセージ送信
 export async function sendMessage(conversationId: string, content: string): Promise<ChatMessage> {
-  const res = await fetch(`${BASE}/api/conversations/${conversationId}/messages/`, {
+  const res = await fetch(`${BASE}/api/message/conversations/${conversationId}/messages/`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({ content }),
@@ -109,7 +109,7 @@ export async function sendMessage(conversationId: string, content: string): Prom
 
 // 既読マーク
 export async function markRead(conversationId: string): Promise<void> {
-  await fetch(`${BASE}/api/conversations/${conversationId}/mark-read/`, {
+  await fetch(`${BASE}/api/message/conversations/${conversationId}/mark-read/`, {
     method: "PATCH",
     headers: getAuthHeaders(),
     credentials: "include",
@@ -118,7 +118,7 @@ export async function markRead(conversationId: string): Promise<void> {
 
 // 会話一覧から特定IDの会話を検索（retrieve APIが存在しないため）
 export async function fetchConversationById(id: string): Promise<Conversation | null> {
-  const res = await fetch(`${BASE}/api/conversations/${id}/`, {
+  const res = await fetch(`${BASE}/api/message/conversations/${id}/`, {
     headers: getAuthHeaders(),
     cache: "no-store",
     credentials: "include",
@@ -128,7 +128,7 @@ export async function fetchConversationById(id: string): Promise<Conversation | 
   // or the item may be present in a later page).
   if (res.status === 404) {
     try {
-      let url: string | null = `${BASE}/api/conversations/`;
+      let url: string | null = `${BASE}/api/message/conversations/`;
       while (url) {
         const listRes = await fetch(url, { headers: getAuthHeaders(), cache: "no-store", credentials: "include" });
         if (!listRes.ok) throw new Error("チャット一覧の取得に失敗しました");
