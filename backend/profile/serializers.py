@@ -49,8 +49,16 @@ class MyProfileSerializer(serializers.ModelSerializer):
     def get_projects(self, obj):
         # Avoid top-level import to prevent potential circular imports
         from project.serializers import ProjectListSerializer
+        # Include projects the user owns plus projects where the user
+        # has an accepted application (i.e. is a participant).
+        from project.models import Project, Application
 
-        qs = obj.projects.all().order_by("-updated_at")
+        owned_qs = obj.projects.all()
+        participating_qs = Project.objects.filter(
+            applications__applicant=obj,
+            applications__status=Application.Status.ACCEPTED,
+        )
+        qs = (owned_qs | participating_qs).distinct().order_by("-updated_at")
         return ProjectListSerializer(qs, many=True, context=self.context).data
 
     def update(self, instance, validated_data):
