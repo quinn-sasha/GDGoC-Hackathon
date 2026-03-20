@@ -41,6 +41,7 @@ export type HomeFeedUpdate = {
   statusBg: string;
   time: string;
   description: string;
+  technologies: string[];
   author: string;
   category: string;
   categoryTag: string;
@@ -56,6 +57,7 @@ export type HomeFeedFeatured = {
   readTime: string;
   title: string;
   description: string;
+  technologies: string[];
   hostInitial: string;
   hostName: string;
   hostIcon: string;
@@ -90,7 +92,7 @@ export async function fetchHomeFeed(): Promise<HomeFeedResponse> {
     const style = getStatusStyle(p.progress_status ?? "");
     const category =
       Array.isArray(p.categories) && p.categories.length > 0 ? String(p.categories[0]) : "";
-    const techDesc = Array.isArray(p.technologies) ? p.technologies.join(" / ") : "";
+    const techs: string[] = Array.isArray(p.technologies) ? p.technologies : [];
     return {
       id: p.id,
       title: p.title ?? "",
@@ -98,7 +100,8 @@ export async function fetchHomeFeed(): Promise<HomeFeedResponse> {
       statusColor: style.statusColor,
       statusBg: style.statusBg,
       time: formatRelativeTime(p.updated_at),
-      description: techDesc,
+      description: p.description ?? techs.join(" / "),
+      technologies: techs,
       author: p.owner_name ?? "",
       category,
       categoryTag: category,
@@ -114,13 +117,15 @@ export async function fetchHomeFeed(): Promise<HomeFeedResponse> {
     Array.isArray(first.categories) && first.categories.length > 0
       ? String(first.categories[0])
       : "";
+  const firstTechs: string[] = Array.isArray(first.technologies) ? first.technologies : [];
   const featured: HomeFeedFeatured = {
     id: first.id,
     badge: firstStyle.label,
     label: "注目",
     readTime: formatRelativeTime(first.updated_at),
     title: first.title ?? "",
-    description: Array.isArray(first.technologies) ? first.technologies.join(" / ") : "",
+    description: first.description ?? firstTechs.join(" / "),
+    technologies: firstTechs,
     hostInitial: (first.owner_name?.[0] ?? "?").toUpperCase(),
     hostName: first.owner_name ?? "",
     hostIcon: first.owner_icon ?? "",

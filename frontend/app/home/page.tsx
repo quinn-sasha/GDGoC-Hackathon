@@ -156,15 +156,24 @@ export default function HomePage() {
         id: item.id,
         title: item.title,
         description: item.description,
+        technologies: item.technologies ?? [],
         category: item.category,
         badge: item.status,
+        statusColor: item.statusColor,
+        statusBg: item.statusBg,
         label: item.category,
         readTime: item.time,
         hostInitial: item.avatarInitial,
         hostName: toDisplayName(item.author),
         projectImagePath: item.projectImagePath,
       }));
-    return [featuredProject, ...updateProjects];
+    const featuredWithExtras = {
+      ...featuredProject,
+      technologies: featured.technologies ?? [],
+      statusColor: featured.statusColor,
+      statusBg: featured.statusBg,
+    };
+    return [featuredWithExtras, ...updateProjects];
   }, [featured, updates]);
 
   const handleSelectRecommendation = (index: number) => {
@@ -253,6 +262,7 @@ export default function HomePage() {
           <h2 style={{ margin: 5, fontSize: 22 }}>おすすめ</h2>
           <div
             ref={recommendedRailRef}
+            className="carousel-rail"
             style={S.recommendedRail}
             onScroll={handleRecommendationRailScroll}
             tabIndex={0}
@@ -265,46 +275,62 @@ export default function HomePage() {
               recommendedProjects.map((p, idx) => (
                 <article
                   key={p.id}
-                  ref={(node) => {
-                    recommendedCardRefs.current[idx] = node;
-                  }}
+                  ref={(node) => { recommendedCardRefs.current[idx] = node; }}
+                  className="rec-card"
                   style={S.recommendedCard}
                   onClick={() => handleOpenProjectDetail(p.id)}
                   role="button"
                   tabIndex={0}
                 >
-                  <div style={S.recommendedImageFrame}>
+                  <div style={{ ...S.recommendedImageFrame, position: "relative" }}>
                     {p.projectImagePath ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.projectImagePath} alt={p.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
                       <Image src={buildProjectImage(p.title, p.category)} alt={p.title} fill sizes="(max-width:480px) 100vw, 420px" style={{ objectFit: "cover" }} />
                     )}
+                    {/* ステータスバッジ（画像右上） */}
+                    <span style={{ position: "absolute", top: 10, right: 10, fontSize: "0.7rem", fontWeight: 700, color: p.statusColor ?? "#888", background: p.statusBg ?? "#1a1a1a", borderRadius: 5, padding: "2px 8px", border: `1px solid ${p.statusColor ?? "#444"}33` }}>
+                      {p.badge}
+                    </span>
                   </div>
                   <div style={S.recommendedContent}>
-                    <div style={S.recommendedMetaRow}>
-                      <span style={{ fontSize: "0.78rem", color: "#9a9a9a" }}>{p.badge}</span>
-                      <span style={{ fontSize: "0.78rem", color: "#9a9a9a" }}>{translateRelativeTime(p.readTime ?? "")}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: "0.72rem", color: "#666" }}>{translateRelativeTime(p.readTime ?? "")}</span>
                     </div>
-                    <h3 style={{ margin: "6px 0 8px" }}>{p.title}</h3>
-                    <p style={{ margin: 0, color: "#aaaaaa", fontSize: "0.9rem" }}>{p.description}</p>
+                    <h3 className="rec-clamp1" style={{ margin: "0 0 6px", fontSize: "0.97rem", fontWeight: 700, color: "#fff", lineHeight: 1.3 }}>{p.title}</h3>
+                    <p className="rec-clamp2" style={{ margin: "0 0 10px", color: "#aaaaaa", fontSize: "0.83rem", lineHeight: 1.5 }}>{p.description}</p>
+                    {p.technologies && p.technologies.length > 0 && (
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as const, marginBottom: 10 }}>
+                        {p.technologies.slice(0, 3).map((t: string) => (
+                          <span key={t} style={{ fontSize: "0.68rem", color: "#777", background: "#222", borderRadius: 4, padding: "2px 6px", border: "1px solid #333" }}>{t}</span>
+                        ))}
+                        {p.technologies.length > 3 && (
+                          <span style={{ fontSize: "0.68rem", color: "#555", padding: "2px 4px" }}>+{p.technologies.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#4fc3a1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 700, flexShrink: 0 }}>
+                        {(p.hostInitial ?? "?").toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: "0.78rem", color: "#777", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{p.hostName}</span>
+                    </div>
                   </div>
                 </article>
               ))
             )}
           </div>
-          <div style={S.recommendedDots} aria-hidden={recommendedProjects.length === 0}>
-            {recommendedProjects.map((p, idx) => (
-              <button
-                key={`dot-${p.id}`}
-                type="button"
-                aria-label={`${idx + 1}件目のおすすめを表示`}
-                aria-pressed={activeRecommendationIndex === idx}
-                style={{ ...S.recommendedDot, ...(activeRecommendationIndex === idx ? S.recommendedDotActive : {}) }}
-                onClick={() => handleSelectRecommendation(idx)}
-              />
-            ))}
-          </div>
+          {/* ページインジケーター */}
+          {recommendedProjects.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 12 }}>
+              <button type="button" onClick={() => handleSelectRecommendation(Math.max(0, activeRecommendationIndex - 1))} disabled={activeRecommendationIndex === 0} style={{ background: "none", border: "none", color: activeRecommendationIndex === 0 ? "#333" : "#888", cursor: activeRecommendationIndex === 0 ? "default" : "pointer", padding: "0 4px", fontSize: 16, lineHeight: 1 }} aria-label="前へ">‹</button>
+              <span style={{ fontSize: "0.8rem", color: "#666", minWidth: 40, textAlign: "center" as const }}>
+                {activeRecommendationIndex + 1} / {recommendedProjects.length}
+              </span>
+              <button type="button" onClick={() => handleSelectRecommendation(Math.min(recommendedProjects.length - 1, activeRecommendationIndex + 1))} disabled={activeRecommendationIndex === recommendedProjects.length - 1} style={{ background: "none", border: "none", color: activeRecommendationIndex === recommendedProjects.length - 1 ? "#333" : "#888", cursor: activeRecommendationIndex === recommendedProjects.length - 1 ? "default" : "pointer", padding: "0 4px", fontSize: 16, lineHeight: 1 }} aria-label="次へ">›</button>
+            </div>
+          )}
         </section>
 
         <section ref={updatesSectionRef} style={S.section}>
