@@ -2,18 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { isMobileUA } from "@/lib/device";
+import { SideNav } from "@/components/SideNav";
 import {
-  type ApiConversation,
-  type ApiMessage,
-  fetchConversationDetail,
+  fetchConversationById,
   fetchMessages,
   sendMessage,
-  markConversationRead,
+  markRead,
+  getMyUserId,
+  type Conversation,
+  type ChatMessage,
 } from "@/lib/chat-client";
 
-function formatMessageTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+function formatTime(isoString: string): string {
+  const d = new Date(isoString);
+  return d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function ChatDetailPage() {
@@ -21,123 +24,124 @@ export default function ChatDetailPage() {
   const params = useParams<{ id: string }>();
   const conversationId = params.id;
 
-  const [conversation, setConversation] = useState<ApiConversation | null>(null);
-  const [messages, setMessages] = useState<ApiMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [isPC, setIsPC] = useState(false);
+  useEffect(() => {
+    setIsPC(window.innerWidth >= 900 && !isMobileUA());
+    const handleResize = () => setIsPC(window.innerWidth >= 900 && !isMobileUA());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length]);
-
-  useEffect(() => {
-    let isMounted = true;
+    if (!conversationId) return;
     Promise.all([
-      fetchConversationDetail(conversationId),
+      fetchConversationById(conversationId),
       fetchMessages(conversationId),
     ])
       .then(([conv, msgs]) => {
-        if (!isMounted) return;
         setConversation(conv);
-        setMessages(msgs);
+        setMessages(msgs.results);
         setLoading(false);
-        markConversationRead(conversationId).catch(() => {});
       })
-      .catch(() => {
-        if (!isMounted) return;
-        setError("チャットの読み込みに失敗しました");
-        setLoading(false);
-      });
-    return () => {
-      isMounted = false;
-    };
+      .catch(() => setLoading(false));
+
+    // 既読マーク
+    markRead(conversationId).catch(() => {});
   }, [conversationId]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length]);
 
   const handleSend = async () => {
     const text = draft.trim();
-    if (!text || isSending) return;
-    setIsSending(true);
+    if (!text || sending) return;
+    setSending(true);
+    setDraft("");
     try {
-      const newMsg = await sendMessage(conversationId, text);
-      setMessages((prev) => [...prev, newMsg]);
-      setDraft("");
+      const sent = await sendMessage(conversationId, text);
+      setMessages((prev) => [...prev, sent]);
     } catch {
-      // 送信失敗時はドラフトを保持
+      setDraft(text); // 失敗したら入力を戻す
     } finally {
-      setIsSending(false);
+      setSending(false);
     }
   };
+
+  const otherName = conversation?.other_user?.username ?? "チャット";
+  const otherInitial = otherName[0]?.toUpperCase() ?? "?";
 
   if (loading) {
     return (
       <main
         style={{
           minHeight: "100vh",
-          maxWidth: 480,
-          margin: "0 auto",
+          maxWidth: isPC ? "100vw" : 480,
+          margin: isPC ? "0" : "0 auto",
           background: "#111111",
           color: "#ffffff",
           fontFamily: "'Segoe UI', sans-serif",
-          padding: "28px 20px",
+          paddingLeft: isPC ? 100 : 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        <button
-          onClick={() => router.push("/chat")}
-          style={{ background: "none", border: "none", color: "#8aff1d", cursor: "pointer", padding: 0 }}
-        >
-          チャット一覧へ戻る
-        </button>
-        <p style={{ marginTop: 20, color: "#bbbbbb" }}>読み込み中...</p>
+        {isPC && <SideNav active="chat" />}
+        <p style={{ color: "#888" }}>読み込み中...</p>
       </main>
     );
   }
 
-  if (error || !conversation) {
+  if (!conversation) {
     return (
       <main
         style={{
           minHeight: "100vh",
-          maxWidth: 480,
-          margin: "0 auto",
+          maxWidth: isPC ? "100vw" : 480,
+          margin: isPC ? "0" : "0 auto",
           background: "#111111",
           color: "#ffffff",
           fontFamily: "'Segoe UI', sans-serif",
           padding: "28px 20px",
+          paddingLeft: isPC ? 120 : 20,
         }}
       >
+        {isPC && <SideNav active="chat" />}
         <button
           onClick={() => router.push("/chat")}
           style={{ background: "none", border: "none", color: "#8aff1d", cursor: "pointer", padding: 0 }}
         >
           チャット一覧へ戻る
         </button>
-        <p style={{ marginTop: 20, color: "#bbbbbb" }}>
-          {error || "メッセージが見つかりませんでした。"}
-        </p>
+        <p style={{ marginTop: 20, color: "#bbbbbb" }}>メッセージが見つかりませんでした。</p>
       </main>
     );
   }
-
-  const title = conversation.other_user?.username ?? "チャット";
-  const avatarInitial = (title[0] ?? "?").toUpperCase();
-  const otherUserId = conversation.other_user?.id;
 
   return (
     <main
       style={{
         minHeight: "100vh",
-        maxWidth: 480,
-        margin: "0 auto",
+        maxWidth: isPC ? "100vw" : 480,
+        margin: isPC ? "0" : "0 auto",
         background: "#111111",
         color: "#ffffff",
         fontFamily: "'Segoe UI', sans-serif",
         display: "flex",
         flexDirection: "column",
+        paddingLeft: isPC ? 100 : 0,
       }}
     >
+      {isPC && <SideNav active="chat" />}
+
       <header
         style={{
           display: "flex",
@@ -156,72 +160,58 @@ export default function ChatDetailPage() {
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #f2d5c8 0%, #c98f87 100%)",
+            display: "grid",
+            placeItems: "center",
+            fontSize: "0.9rem",
+            fontWeight: 800,
+            color: "#2b1f1c",
+            flexShrink: 0,
+            overflow: "hidden",
+          }}
+        >
+          {conversation.other_user?.icon_image_path ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={conversation.other_user.icon_image_path} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            otherInitial
+          )}
+        </div>
         <div>
-          <h1 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>{title}</h1>
+          <h1 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>{otherName}</h1>
           <p style={{ margin: "3px 0 0", color: "#888888", fontSize: "0.78rem" }}>
-            オフライン
+            {conversation.room_type === "PERSONAL_CHAT" ? "個人チャット" : "プロジェクトチャット"}
           </p>
         </div>
       </header>
 
       <section
         style={{
-          margin: "14px 16px 0",
-          padding: "14px",
-          borderRadius: 18,
-          background: "#171717",
-          border: "1px solid #262626",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <div>
-            <p style={{ margin: 0, color: "#8a8a8a", fontSize: "0.74rem", letterSpacing: "0.08em" }}>
-              PROJECT CONTEXT
-            </p>
-            <h2 style={{ margin: "6px 0 0", fontSize: "0.96rem" }}>
-              {conversation.project_id
-                ? `プロジェクト ${conversation.project_id.slice(0, 8)}`
-                : "ダイレクトメッセージ"}
-            </h2>
-          </div>
-          <span
-            style={{
-              borderRadius: 999,
-              background: "#202020",
-              border: "1px solid #313131",
-              color: "#d0d0d0",
-              padding: "7px 10px",
-              fontSize: "0.74rem",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {conversation.room_type === "PERSONAL_CHAT" ? "個人チャット" : "プロジェクト"}
-          </span>
-        </div>
-      </section>
-
-      <section
-        style={{
           flex: 1,
           overflowY: "auto",
-          padding: "18px 16px 186px",
+          padding: "18px 16px 100px",
           display: "flex",
           flexDirection: "column",
           gap: 12,
         }}
       >
-        <div style={{ alignSelf: "center", color: "#777777", fontSize: "0.75rem", marginBottom: 4 }}>
-          今日
-        </div>
-        {messages.map((message) => {
-          const isMine = otherUserId !== undefined ? message.sender.id !== otherUserId : false;
+        {messages.length === 0 && (
+          <div style={{ alignSelf: "center", color: "#777777", fontSize: "0.85rem", marginTop: 40 }}>
+            まだメッセージはありません
+          </div>
+        )}
+        {messages.map((msg) => {
+          const myId = getMyUserId();
+          const isMine = myId !== null && msg.sender.id === myId;
 
           if (isMine) {
             return (
-              <div
-                key={message.id}
-                style={{ width: "100%", display: "flex", justifyContent: "flex-end" }}
-              >
+              <div key={msg.id} style={{ width: "100%", display: "flex", justifyContent: "flex-end" }}>
                 <div style={{ maxWidth: "78%" }}>
                   <div
                     style={{
@@ -233,17 +223,10 @@ export default function ChatDetailPage() {
                       lineHeight: 1.45,
                     }}
                   >
-                    {message.content}
+                    {msg.content}
                   </div>
-                  <p
-                    style={{
-                      margin: "5px 2px 0",
-                      textAlign: "right",
-                      color: "#888888",
-                      fontSize: "0.72rem",
-                    }}
-                  >
-                    {formatMessageTime(message.created_at)}
+                  <p style={{ margin: "5px 2px 0", textAlign: "right", color: "#888888", fontSize: "0.72rem" }}>
+                    {formatTime(msg.created_at)}
                   </p>
                 </div>
               </div>
@@ -251,16 +234,7 @@ export default function ChatDetailPage() {
           }
 
           return (
-            <div
-              key={message.id}
-              style={{
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                gap: 5,
-              }}
-            >
+            <div key={msg.id} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 5 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
                 <div
                   style={{
@@ -275,9 +249,15 @@ export default function ChatDetailPage() {
                     fontSize: "0.8rem",
                     fontWeight: 800,
                     flexShrink: 0,
+                    overflow: "hidden",
                   }}
                 >
-                  {avatarInitial}
+                  {msg.sender.icon_image_path ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={msg.sender.icon_image_path} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    msg.sender.username[0]?.toUpperCase() ?? "?"
+                  )}
                 </div>
                 <div
                   style={{
@@ -291,43 +271,33 @@ export default function ChatDetailPage() {
                     lineHeight: 1.45,
                   }}
                 >
-                  {message.content}
+                  {msg.content}
                 </div>
               </div>
-              <p
-                style={{
-                  margin: "0 0 0 42px",
-                  textAlign: "left",
-                  color: "#888888",
-                  fontSize: "0.72rem",
-                }}
-              >
-                {formatMessageTime(message.created_at)}
+              <p style={{ margin: "0 0 0 42px", textAlign: "left", color: "#888888", fontSize: "0.72rem" }}>
+                {formatTime(msg.created_at)}
               </p>
             </div>
           );
         })}
-        <div ref={endOfMessagesRef} />
+        <div ref={endRef} />
       </section>
 
       <footer
         style={{
           position: "fixed",
           bottom: 0,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "100%",
-          maxWidth: 480,
+          left: isPC ? 100 : "50%",
+          transform: isPC ? "none" : "translateX(-50%)",
+          width: isPC ? `calc(100% - 100px)` : "100%",
+          maxWidth: isPC ? "none" : 480,
           padding: "12px 14px 16px",
           borderTop: "1px solid #2a2a2a",
           background: "#111111",
         }}
       >
         <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            handleSend();
-          }}
+          onSubmit={(e) => { e.preventDefault(); handleSend(); }}
           style={{
             height: 46,
             borderRadius: 24,
@@ -342,8 +312,9 @@ export default function ChatDetailPage() {
         >
           <input
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(e) => setDraft(e.target.value)}
             placeholder="メッセージを入力..."
+            disabled={sending}
             style={{
               flex: 1,
               background: "transparent",
@@ -355,14 +326,14 @@ export default function ChatDetailPage() {
           />
           <button
             type="submit"
-            disabled={!draft.trim() || isSending}
+            disabled={!draft.trim() || sending}
             style={{
               border: "none",
               background: "none",
-              color: draft.trim() && !isSending ? "#8aff1d" : "#5f6b50",
+              color: draft.trim() && !sending ? "#8aff1d" : "#5f6b50",
               fontWeight: 800,
               fontSize: "0.9rem",
-              cursor: draft.trim() && !isSending ? "pointer" : "default",
+              cursor: draft.trim() && !sending ? "pointer" : "default",
               padding: "0 8px",
             }}
           >

@@ -1,32 +1,77 @@
-import { apiUrl, buildAuthHeaders } from "@/lib/api";
+import { getAuthToken } from "@/lib/auth-client";
 
-export type ProfileData = {
-  id: number;
-  username: string;
-  email: string;
-  profile_bio: string | null;
-  github_url: string | null;
-  icon_image_path: string | null;
-  skills: { id: number; name: string }[];
-  created_at: string;
-  updated_at: string;
-};
+const BASE =
+  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
 
-export async function fetchProfile(): Promise<ProfileData> {
-  const res = await fetch(apiUrl("/api/profile/me/"), {
-    headers: buildAuthHeaders(),
-    cache: "no-store",
+function getAuthHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
+// 自分のプロフィール取得
+export async function fetchProfile() {
+  const res = await fetch(`${BASE}/api/profile/me/`, {
+    headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error("プロフィール取得に失敗しました");
   return res.json();
 }
 
-export async function updateProfile(data: Partial<ProfileData & { skill_ids?: number[] }>) {
-  const res = await fetch(apiUrl("/api/profile/me/"), {
+// プロフィール更新
+export async function updateProfile(data: Record<string, unknown>) {
+  const res = await fetch(`${BASE}/api/profile/me/`, {
     method: "PATCH",
-    headers: buildAuthHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("プロフィール更新に失敗しました");
+  return res.json();
+}
+
+// 技術スキル一覧取得
+export async function fetchSkills(): Promise<{ id: number; name: string }[]> {
+  const res = await fetch(`${BASE}/api/profile/skills/`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("スキル一覧取得に失敗しました");
+  return res.json();
+}
+
+// プロフィールアイコンをアップロード
+export async function uploadProfileIcon(file: File): Promise<string> {
+  const token = getAuthToken();
+  const formData = new FormData();
+  formData.append("image", file);
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/profile/me/upload-icon/`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  if (!res.ok) {
+    let detail = "アイコンのアップロードに失敗しました";
+    try {
+      const err = await res.json();
+      if (err.detail) detail = String(err.detail);
+    } catch { /* ignore */ }
+    throw new Error(detail);
+  }
+  const data = await res.json();
+  return data.icon_image_path as string;
+}
+
+// 他ユーザーのプロフィール取得（me の場合は自分のプロフィール）
+export async function fetchProfileById(userId: string) {
+  const url =
+    userId === "me"
+      ? `${BASE}/api/profile/me/`
+      : `${BASE}/api/profile/${encodeURIComponent(userId)}/`;
+  const res = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error("プロフィール取得に失敗しました");
   return res.json();
 }

@@ -1,8 +1,15 @@
-import { BASE_URL, setTokens } from "@/lib/api";
+/** ストレージからアクセストークンを取得する共通関数 */
+export function getAuthToken(): string | null {
+  return typeof window !== "undefined"
+    ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
+    : null;
+}
 
 export type AuthApiResult = {
   ok: boolean;
   message: string;
+  access?: string;
+  refresh?: string;
 };
 
 type ApiErrorBody = {
@@ -34,6 +41,7 @@ function extractMessage(data: ApiErrorBody | null): string {
   if (data.message) return String(data.message);
   if (data.detail) return String(data.detail);
   if (data.non_field_errors?.[0]) return String(data.non_field_errors[0]);
+  // フィールドエラー（例: {"email": ["既に存在します"]}）の最初のメッセージを返す
   for (const key of Object.keys(data)) {
     const val = data[key];
     if (Array.isArray(val) && typeof val[0] === "string") return val[0];
@@ -45,7 +53,10 @@ async function postJson<TPayload>(
   url: string,
   payload: TPayload,
 ): Promise<AuthApiResult> {
-  const requestUrl = `${BASE_URL}${url}`;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ??
+    "http://localhost:8000";
+  const requestUrl = `${baseUrl}${url}`;
 
   const response = await fetch(requestUrl, {
     method: "POST",
@@ -55,22 +66,22 @@ async function postJson<TPayload>(
     body: JSON.stringify(payload),
   });
 
-  const data = (await response.json().catch(() => null)) as Record<string, unknown> | null;
-  const message = extractMessage(data as ApiErrorBody | null);
+  const data = (await response.json().catch(() => null)) as ApiErrorBody | null;
+  const message = extractMessage(data);
 
-  // JWT トークンが含まれていれば保存 (login / verify-email)
-  if (
-    response.ok &&
-    data &&
-    typeof data.access === "string" &&
-    typeof data.refresh === "string"
-  ) {
-    setTokens(data.access, data.refresh);
+  // JWTトークンが返ってきた場合はlocalStorageに保存
+  if (response.ok && data && typeof data.access === "string" && typeof window !== "undefined") {
+    localStorage.setItem("access_token", data.access);
+    if (typeof data.refresh === "string") {
+      localStorage.setItem("refresh_token", data.refresh);
+    }
   }
 
   return {
-    ok: response.ok && ((data as ApiErrorBody)?.ok ?? true),
+    ok: response.ok && (data?.ok ?? true),
     message,
+    access: data?.access as string | undefined,
+    refresh: data?.refresh as string | undefined,
   };
 }
 

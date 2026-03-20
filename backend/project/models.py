@@ -152,6 +152,10 @@ class Application(models.Model):
         default=Status.PENDING,
         verbose_name="ステータス",
     )
+    role = models.CharField(max_length=100, blank=True, default="", verbose_name="希望役割")
+    availability = models.CharField(max_length=100, blank=True, default="", verbose_name="参加ペース")
+    message = models.TextField(blank=True, default="", verbose_name="メッセージ")
+    portfolio_url = models.CharField(max_length=200, blank=True, default="", verbose_name="ポートフォリオURL")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="申請日時")
     applicant = models.ForeignKey(
         settings.AUTH_USER_MODEL,

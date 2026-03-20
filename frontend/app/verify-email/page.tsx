@@ -1,6 +1,6 @@
 "use client";
-
-import { FormEvent, useState } from "react";
+import { isMobileUA } from "@/lib/device";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { verifyEmail } from "@/lib/auth-client";
@@ -8,6 +8,13 @@ import { verifyEmail } from "@/lib/auth-client";
 export default function VerifyEmailPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(isMobileUA());
+    const handleResize = () => setIsMobile(isMobileUA());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [defaultToken, setDefaultToken] = useState(() => {
@@ -35,6 +42,16 @@ export default function VerifyEmailPage() {
       setIsSubmitting(false);
       return;
     }
+    // 保存されたトークンがあればストレージに格納する
+    try {
+      if ((result as any).access) {
+        // 永続化の要否は既定で localStorage にする
+        localStorage.setItem("access_token", (result as any).access);
+        if ((result as any).refresh) localStorage.setItem("refresh_token", (result as any).refresh);
+      }
+    } catch {
+      // 無視: 環境によっては storage が利用不可
+    }
 
     setSuccessMessage("メール認証が完了しました。ホームへ移動します...");
     setTimeout(() => {
@@ -44,7 +61,7 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <main className="login-shell">
+    <main className="login-shell auth-dark">
       <section className="login-card" aria-labelledby="verify-title">
         <p className="login-kicker">メール認証</p>
         <h1 id="verify-title">メールアドレスを認証する</h1>

@@ -1,6 +1,6 @@
 import re
 from rest_framework import serializers
-from .models import Project, TechSkill, TechCategory, VibeTag
+from .models import Project, TechSkill, TechCategory, VibeTag, Application
 from django.core.exceptions import ValidationError
 
 
@@ -61,6 +61,9 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
     # custom fields
     num_saved = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
+    is_applied = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
+    chatroom_id = serializers.SerializerMethodField()
 
     def get_num_saved(self, obj):
         return obj.saved_by_users.count()
@@ -72,6 +75,30 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
         if not request.user.is_authenticated:
             return False
         return obj.saved_by_users.filter(id=request.user.id).exists()
+
+    def get_is_applied(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.applications.filter(applicant=request.user).exists()
+
+    def get_is_owner(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.owner == request.user
+
+    def get_chatroom_id(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        from message.models import Chatroom
+        chatroom = Chatroom.objects.filter(
+            room_type=Chatroom.RoomType.PROJECT_CHAT,
+            project=obj,
+            members__user=request.user,
+        ).first()
+        return str(chatroom.id) if chatroom else None
 
     class Meta:
         model = Project
@@ -91,6 +118,9 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
             "vibe_tags",
             "num_saved",
             "is_saved",
+            "is_applied",
+            "is_owner",
+            "chatroom_id",
         ]
         read_only_fields = fields
 
@@ -193,3 +223,33 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
             "categories",
             "vibe_tags",
         ]
+
+
+class ApplicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Application
+        fields = ["id", "role", "availability", "message", "portfolio_url", "status", "created_at"]
+        read_only_fields = ["id", "status", "created_at"]
+
+
+class ApplicationDetailSerializer(serializers.ModelSerializer):
+    """オーナー向け: 応募者情報つきの応募詳細シリアライザー"""
+    applicant_id = serializers.IntegerField(source="applicant.id", read_only=True)
+    applicant_name = serializers.CharField(source="applicant.username", read_only=True)
+    applicant_icon = serializers.CharField(source="applicant.icon_image_path", read_only=True)
+
+    class Meta:
+        model = Application
+        fields = [
+            "id",
+            "applicant_id",
+            "applicant_name",
+            "applicant_icon",
+            "role",
+            "availability",
+            "message",
+            "portfolio_url",
+            "status",
+            "created_at",
+        ]
+        read_only_fields = fields

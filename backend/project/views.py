@@ -3,15 +3,20 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
-
+from django.core.exceptions import ImproperlyConfigured
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 
-from .models import Project
+from message.services import get_or_create_project_chatroom
+
+from .models import Project, Application
 from .serializers import (
     ProjectListSerializer,
     ProjectDetailSerializer,
     ProjectWriteSerializer,
+    ApplicationSerializer,
+    ApplicationDetailSerializer,
 )
 
 # ==========================================
@@ -95,6 +100,125 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer.save(owner=self.request.user)
 
     @extend_schema(
+        summary="プロジェクトへの参加申請",
+        description="ログイン中のユーザーが指定プロジェクトに参加申請します。重複申請はエラーになります。",
+        request=ApplicationSerializer,
+        responses={
+            201: ApplicationSerializer,
+            400: OpenApiResponse(description="すでに申請済み"),
+        },
+    )
+    @action(
+        detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
+    )
+    def apply(self, request, pk=None):
+        """
+        プロジェクトへの参加申請
+        POST /api/projects/{id}/apply/
+        """
+        project = self.get_object()
+        if project.owner == request.user:
+            return Response(
+                {"detail": "自分のプロジェクトには応募できません。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if Application.objects.filter(project=project, applicant=request.user).exists():
+            return Response(
+                {"detail": "すでにこのプロジェクトに申請済みです。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = ApplicationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(project=project, applicant=request.user)
+        chatroom_id, _ = get_or_create_project_chatroom(project, request.user)
+        return Response(
+            {**serializer.data, "chatroom_id": str(chatroom_id)},
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        summary="応募者一覧取得（オーナーのみ）",
+        description="プロジェクトオーナーのみが応募者の詳細一覧を取得できます。",
+        responses={
+            200: ApplicationDetailSerializer(many=True),
+            403: OpenApiResponse(description="オーナー以外はアクセス不可"),
+        },
+    )
+    @action(
+        detail=True, methods=["get"], permission_classes=[permissions.IsAuthenticated]
+    )
+    def applications(self, request, pk=None):
+        """
+        応募者一覧取得（オーナー専用）
+        GET /api/projects/{id}/applications/
+        """
+        project = self.get_object()
+        if project.owner != request.user:
+            return Response(
+                {"detail": "このプロジェクトのオーナーのみアクセスできます。"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        apps = (
+            Application.objects.filter(project=project)
+            .select_related("applicant")
+            .order_by("created_at")
+        )
+        serializer = ApplicationDetailSerializer(apps, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="プロジェクト画像アップロード",
+        description="プロジェクトのサムネイル画像を GCS にアップロードし、project_image_path を更新します。",
+        responses={
+            200: OpenApiResponse(description="アップロード成功"),
+            400: OpenApiResponse(description="ファイルなし・形式エラー"),
+            403: OpenApiResponse(description="オーナー以外は不可"),
+            503: OpenApiResponse(description="GCS 未設定"),
+        },
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[permissions.IsAuthenticated],
+        parser_classes=[MultiPartParser],
+        url_path="upload-image",
+    )
+    def upload_image(self, request, pk=None):
+        """
+        プロジェクト画像アップロード
+        POST /api/projects/{id}/upload-image/  (multipart/form-data, field: image)
+        """
+        project = self.get_object()
+        if project.owner != request.user:
+            return Response(
+                {"detail": "プロジェクトのオーナーのみ画像をアップロードできます。"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        file = request.FILES.get("image")
+        if not file:
+            return Response(
+                {"detail": "image フィールドにファイルを添付してください。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from config.gcs import upload_image as gcs_upload, build_project_image_path, validate_image_file
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        try:
+            validate_image_file(file)
+        except DRFValidationError as e:
+            return Response({"detail": e.detail[0]}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            dest = build_project_image_path(str(project.id), file.name)
+            url = gcs_upload(file, dest)
+        except ImproperlyConfigured:
+            return Response(
+                {"detail": "画像ストレージが設定されていません。"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        project.project_image_path = url
+        project.save(update_fields=["project_image_path"])
+        return Response({"project_image_path": url}, status=status.HTTP_200_OK)
+
+    @extend_schema(
         summary="お気に入り登録・解除",
         description="ログイン中のユーザーの「保存済みプロジェクト」を切り替えます。",
         responses={200: OpenApiResponse(description="成功")},
@@ -126,7 +250,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     )
     def list(self, request, *args, **kwargs):
         MAX_ITEMS_PER_CATEGORY = 10
-        recommnede_projects = []
+        recommended_projects = []
         base_queryset = self.get_queryset()
         unique_ids = set()
         # Skill Match
@@ -143,7 +267,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     .distinct()
                     [:MAX_ITEMS_PER_CATEGORY]
                 )
-                recommnede_projects.extend(skill_matching_projects)
+                recommended_projects.extend(skill_matching_projects)
                 unique_ids |= {p.id for p in skill_matching_projects}
         # Popularity (直近二週間に更新されたプロジェクトの保存数）
         POPULAR_DAYS_LIMIT = 14
@@ -156,7 +280,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             .order_by("-popularity_score", "-updated_at")
             [:MAX_ITEMS_PER_CATEGORY]
         )
-        recommnede_projects.extend(popular_projects)
+        recommended_projects.extend(popular_projects)
         unique_ids |= {p.id for p in popular_projects}
         # Recent Projects
         recent_projects = list(
@@ -165,7 +289,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             .order_by("-updated_at")
             [:MAX_ITEMS_PER_CATEGORY]
         )
-        recommnede_projects.extend(recent_projects)
+        recommended_projects.extend(recent_projects)
 
-        serializer = ProjectListSerializer(recommnede_projects, many=True)
+        serializer = ProjectListSerializer(recommended_projects, many=True)
         return Response(serializer.data)

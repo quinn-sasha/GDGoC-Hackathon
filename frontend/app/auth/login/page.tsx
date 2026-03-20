@@ -1,13 +1,21 @@
 "use client";
-
+import { isMobileUA } from "@/lib/device";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { login } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(isMobileUA());
+    const handleResize = () => setIsMobile(isMobileUA());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -31,6 +39,24 @@ export default function LoginPage() {
         return;
       }
 
+      // Store tokens if returned (localStorage/sessionStorage)
+      // Use a safe access pattern to avoid TypeScript compile issues in build.
+      const accessToken = (result as any)?.access as string | undefined;
+      const refreshToken = (result as any)?.refresh as string | undefined;
+      if (accessToken) {
+        try {
+          if (payload.remember) {
+            localStorage.setItem("access_token", accessToken);
+            if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
+          } else {
+            sessionStorage.setItem("access_token", accessToken);
+            if (refreshToken) sessionStorage.setItem("refresh_token", refreshToken);
+          }
+        } catch {
+          /* ignore storage errors in restricted environments */
+        }
+      }
+
       router.push("/home");
     } catch {
       setErrorMessage("通信エラーが発生しました。時間をおいて再試行してください。");
@@ -40,7 +66,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="login-shell">
+    <main className="login-shell auth-dark">
       <section className="login-card" aria-labelledby="login-title">
         <h1 id="login-title">アカウントにサインイン</h1>
 

@@ -1,53 +1,40 @@
-import { apiUrl, buildAuthHeaders } from "@/lib/api";
+const BASE =
+  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
 
-// --- バックエンドAPIの型 ---
+function getAuthHeaders(): Record<string, string> {
+  const token =
+    typeof window !== "undefined"
+      ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
+      : null;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
 
-type ApiProject = {
-  id: string;
-  owner_name: string;
-  owner_icon: string | null;
-  progress_status: string;
-  title: string;
-  description: string;
-  project_image_path: string | null;
-  created_at: string;
-  updated_at: string;
-  technologies: string[];
-  categories: string[];
-  num_saved: number;
-  skill_match_count: number;
+function formatRelativeTime(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "今";
+  if (min < 60) return `${min}分前`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}時間前`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}日前`;
+  return new Date(isoString).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
+}
+
+type StatusStyle = { statusColor: string; statusBg: string; label: string };
+const STATUS_STYLE_MAP: Record<string, StatusStyle> = {
+  opening: { statusColor: "#6699ff", statusBg: "#1a1a2e", label: "開始前" },
+  ongoing: { statusColor: "#4fc3a1", statusBg: "#0d2e22", label: "進行中" },
+  completed: { statusColor: "#cc9944", statusBg: "#2a1a1a", label: "完了" },
 };
+function getStatusStyle(status: string): StatusStyle {
+  return STATUS_STYLE_MAP[status] ?? { statusColor: "#888888", statusBg: "#1a1a1a", label: status };
+}
 
-type ApiSection = {
-  id: string;
-  title: string;
-  reason: string;
-  reason_detail: string | null;
-  projects: ApiProject[];
-};
-
-type ApiCategory = {
-  id: number;
-  name: string;
-  slug: string;
-};
-
-// --- UI向け型 (既存ページとの互換用) ---
-
-export type UiFeatured = {
-  id: string;
-  title: string;
-  description: string;
-  badge: string;
-  label: string;
-  readTime: string;
-  hostInitial: string;
-  hostName: string;
-  category: string;
-};
-
-export type UiUpdate = {
-  id: string;
+export type HomeFeedUpdate = {
+  id: string | number;
   title: string;
   status: string;
   statusColor: string;
@@ -55,104 +42,107 @@ export type UiUpdate = {
   time: string;
   description: string;
   author: string;
-  avatarInitial: string;
   category: string;
   categoryTag: string;
+  avatarInitial: string;
+  ownerIcon: string;
+  projectImagePath: string | null;
+};
+
+export type HomeFeedFeatured = {
+  id: string | number;
+  badge: string;
+  label: string;
+  readTime: string;
+  title: string;
+  description: string;
+  hostInitial: string;
+  hostName: string;
+  hostIcon: string;
+  category: string;
+  statusColor: string;
+  statusBg: string;
+  time: string;
+  projectImagePath: string | null;
 };
 
 export type HomeFeedResponse = {
-  categories: { name: string; slug: string }[];
-  featured: UiFeatured | null;
-  updates: UiUpdate[];
+  categories: string[];
+  featured: HomeFeedFeatured | null;
+  updates: HomeFeedUpdate[];
 };
 
-// --- アダプター ---
-
-const PROGRESS_STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  opening: { label: "RECRUITING", color: "#4fc3a1", bg: "#1a3028" },
-  ongoing: { label: "ONGOING", color: "#6b9eff", bg: "#0d1f4a" },
-  completed: { label: "COMPLETED", color: "#666666", bg: "#242424" },
-};
-
-function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return "今";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  return diffDays === 1 ? "Yesterday" : `${diffDays}日前`;
-}
-
-function toUiFeatured(p: ApiProject): UiFeatured {
-  const s = PROGRESS_STATUS_MAP[p.progress_status] ?? PROGRESS_STATUS_MAP.opening;
-  return {
-    id: p.id,
-    title: p.title,
-    description: p.description ?? p.technologies.slice(0, 3).join(" / "),
-    badge: s.label,
-    label: p.categories[0] ?? "Tech",
-    readTime: formatRelativeTime(p.updated_at),
-    hostInitial: (p.owner_name[0] ?? "?").toUpperCase(),
-    hostName: p.owner_name,
-    category: p.categories[0] ?? "",
-  };
-}
-
-function toUiUpdate(p: ApiProject): UiUpdate {
-  const s = PROGRESS_STATUS_MAP[p.progress_status] ?? PROGRESS_STATUS_MAP.opening;
-  return {
-    id: p.id,
-    title: p.title,
-    description: p.description ?? p.technologies.slice(0, 3).join(" · "),
-    status: s.label,
-    statusColor: s.color,
-    statusBg: s.bg,
-    time: formatRelativeTime(p.updated_at),
-    author: p.owner_name,
-    avatarInitial: (p.owner_name[0] ?? "?").toUpperCase(),
-    category: p.categories[0] ?? "",
-    categoryTag: p.categories[0] ?? "",
-  };
-}
-
-// --- API呼び出し ---
-
-export async function fetchHomeFeed(params?: {
-  search?: string;
-  category?: string;
-}): Promise<HomeFeedResponse> {
-  const query = new URLSearchParams();
-  if (params?.search) query.set("search", params.search);
-  if (params?.category) query.set("category", params.category);
-
-  const qs = query.toString();
-  const url = apiUrl(`/api/home/${qs ? `?${qs}` : ""}`);
-
-  const response = await fetch(url, {
-    headers: buildAuthHeaders(),
+export async function fetchHomeFeed(): Promise<HomeFeedResponse> {
+  const res = await fetch(`${BASE}/api/projects/`, {
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
+  if (!res.ok) throw new Error("プロジェクト一覧の取得に失敗しました");
+  const data = await res.json();
+  // Django REST Framework のリスト API はページネーション付き { results: [] } または配列
+  const list: any[] = Array.isArray(data) ? data : (data.results ?? []);
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch home feed.");
+  if (list.length === 0) {
+    return { categories: ["すべて"], featured: null, updates: [] };
   }
 
-  const data: { categories: ApiCategory[]; sections: ApiSection[] } =
-    await response.json();
+  const updates: HomeFeedUpdate[] = list.map((p: any) => {
+    const style = getStatusStyle(p.progress_status ?? "");
+    const category =
+      Array.isArray(p.categories) && p.categories.length > 0 ? String(p.categories[0]) : "";
+    const techDesc = Array.isArray(p.technologies) ? p.technologies.join(" / ") : "";
+    return {
+      id: p.id,
+      title: p.title ?? "",
+      status: style.label,
+      statusColor: style.statusColor,
+      statusBg: style.statusBg,
+      time: formatRelativeTime(p.updated_at),
+      description: techDesc,
+      author: p.owner_name ?? "",
+      category,
+      categoryTag: category,
+      avatarInitial: (p.owner_name?.[0] ?? "?").toUpperCase(),
+      ownerIcon: p.owner_icon ?? "",
+      projectImagePath: p.project_image_path ?? null,
+    };
+  });
 
-  const firstSection = data.sections[0];
-  const recentSection =
-    data.sections.find((s) => s.id === "recent") ??
-    data.sections.find((s) => s.id === "search_results") ??
-    data.sections[data.sections.length - 1];
+  const first = list[0];
+  const firstStyle = getStatusStyle(first.progress_status ?? "");
+  const firstCategory =
+    Array.isArray(first.categories) && first.categories.length > 0
+      ? String(first.categories[0])
+      : "";
+  const featured: HomeFeedFeatured = {
+    id: first.id,
+    badge: firstStyle.label,
+    label: "注目",
+    readTime: formatRelativeTime(first.updated_at),
+    title: first.title ?? "",
+    description: Array.isArray(first.technologies) ? first.technologies.join(" / ") : "",
+    hostInitial: (first.owner_name?.[0] ?? "?").toUpperCase(),
+    hostName: first.owner_name ?? "",
+    hostIcon: first.owner_icon ?? "",
+    category: firstCategory,
+    projectImagePath: first.project_image_path ?? null,
+    statusColor: firstStyle.statusColor,
+    statusBg: firstStyle.statusBg,
+    time: formatRelativeTime(first.updated_at),
+  };
+
+  const categoriesSet = new Set<string>(["すべて"]);
+  for (const p of list) {
+    if (Array.isArray(p.categories)) {
+      for (const cat of p.categories) {
+        if (cat) categoriesSet.add(String(cat));
+      }
+    }
+  }
 
   return {
-    categories: data.categories.map((c) => ({ name: c.name, slug: c.slug })),
-    featured: firstSection?.projects[0] ? toUiFeatured(firstSection.projects[0]) : null,
-    updates: (recentSection?.projects ?? []).map(toUiUpdate),
+    categories: Array.from(categoriesSet),
+    featured,
+    updates,
   };
 }

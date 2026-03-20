@@ -1,150 +1,133 @@
-import { apiUrl, buildAuthHeaders } from "@/lib/api";
+const BASE =
+  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
+const BASE =
+  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
 
-// --- バックエンドAPIの型 ---
+// JWTペイロードから自分のuser_idを取得
+export function getMyUserId(): number | null {
+  if (typeof window === "undefined") return null;
+  const token =
+    sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token");
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return typeof payload.user_id === "number" ? payload.user_id : null;
+  } catch {
+    return null;
+  }
+}
 
-export type ApiConversation = {
+function getAuthHeaders(): Record<string, string> {
+  const token =
+    typeof window !== "undefined"
+      ? (sessionStorage.getItem("access_token") ?? localStorage.getItem("access_token"))
+      : null;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
+export type ConversationOtherUser = {
+  id: number;
+  username: string;
+  icon_image_path: string;
+};
+
+export type ConversationLastMessage = {
   id: string;
-  room_type: "PROJECT_CHAT" | "PERSONAL_CHAT";
+  sender_username: string;
+  content: string;
+  created_at: string;
+};
+
+export type Conversation = {
+  id: string; // UUID
+  room_type: "PERSONAL_CHAT" | "PROJECT_CHAT";
   project_id: string | null;
-  other_user: {
-    id: number;
-    username: string;
-    icon_image_path: string | null;
-  } | null;
-  last_message: {
-    id: number;
-    sender_username: string;
-    content: string;
-    created_at: string;
-  } | null;
+  project_title: string | null;
+  other_user: ConversationOtherUser | null;
+  last_message: ConversationLastMessage | null;
   unread_count: number;
   updated_at: string;
 };
 
-export type ApiMessage = {
-  id: number;
+export type PaginatedConversations = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Conversation[];
+};
+
+export type ChatMessage = {
+  id: string; // UUID
   sender: {
     id: number;
     username: string;
-    icon_image_path: string | null;
+    icon_image_path: string;
   };
   content: string;
   created_at: string;
 };
 
-type ConversationListResponse = {
-  count: number;
+export type PaginatedMessages = {
   next: string | null;
   previous: string | null;
-  results: ApiConversation[];
+  results: ChatMessage[];
 };
 
-type MessageListResponse = {
-  next: string | null;
-  previous: string | null;
-  results: ApiMessage[];
-};
-
-// --- UI向けスレッド型 ---
-
-export type UiThread = {
-  id: string;
-  title: string;
-  project: string;
-  role: string;
-  preview: string;
-  unreadCount: number;
-  online: boolean;
-  pinned: boolean;
-  avatar: string;
-  time: string;
-};
-
-function formatTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return "今";
-  if (diffMins < 60) return `${diffMins}分前`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}時間前`;
-  return `${Math.floor(diffHours / 24)}日前`;
-}
-
-function toUiThread(conv: ApiConversation): UiThread {
-  const title =
-    conv.other_user?.username ?? `チャット ${conv.id.slice(0, 8)}`;
-  return {
-    id: conv.id,
-    title,
-    project:
-      conv.project_id
-        ? `プロジェクト ${conv.project_id.slice(0, 8)}`
-        : "ダイレクトメッセージ",
-    role: "",
-    preview: conv.last_message?.content ?? "",
-    unreadCount: conv.unread_count,
-    online: false,
-    pinned: false,
-    avatar: (title[0] ?? "?").toUpperCase(),
-    time: conv.updated_at ? formatTime(conv.updated_at) : "",
-  };
-}
-
-// --- API呼び出し ---
-
-export async function fetchConversations(): Promise<UiThread[]> {
-  const response = await fetch(apiUrl("/api/conversations/"), {
-    headers: buildAuthHeaders(),
+// 会話一覧取得
+export async function fetchConversations(): Promise<PaginatedConversations> {
+  const res = await fetch(`${BASE}/api/conversations/`, {
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error("会話一覧の取得に失敗しました");
-  const data: ConversationListResponse = await response.json();
-  return data.results.map(toUiThread);
+  if (!res.ok) throw new Error("チャット一覧の取得に失敗しました");
+  return res.json();
 }
 
-export async function fetchConversationDetail(id: string): Promise<ApiConversation> {
-  const response = await fetch(apiUrl(`/api/conversations/${id}/`), {
-    headers: buildAuthHeaders(),
+// メッセージ一覧取得
+export async function fetchMessages(conversationId: string): Promise<PaginatedMessages> {
+  const res = await fetch(`${BASE}/api/conversations/${conversationId}/messages/`, {
+    headers: getAuthHeaders(),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error("会話の取得に失敗しました");
-  return response.json();
+  if (!res.ok) throw new Error("メッセージの取得に失敗しました");
+  return res.json();
 }
 
-export async function fetchMessages(conversationId: string): Promise<ApiMessage[]> {
-  const response = await fetch(
-    apiUrl(`/api/conversations/${conversationId}/messages/`),
-    {
-      headers: buildAuthHeaders(),
-      cache: "no-store",
-    },
-  );
-  if (!response.ok) throw new Error("メッセージの取得に失敗しました");
-  const data: MessageListResponse = await response.json();
-  return data.results;
+// メッセージ送信
+export async function sendMessage(conversationId: string, content: string): Promise<ChatMessage> {
+  const res = await fetch(`${BASE}/api/conversations/${conversationId}/messages/`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error("メッセージの送信に失敗しました");
+  return res.json();
 }
 
-export async function sendMessage(
-  conversationId: string,
-  content: string,
-): Promise<ApiMessage> {
-  const response = await fetch(
-    apiUrl(`/api/conversations/${conversationId}/messages/`),
-    {
-      method: "POST",
-      headers: buildAuthHeaders(),
-      body: JSON.stringify({ content }),
-    },
-  );
-  if (!response.ok) throw new Error("メッセージの送信に失敗しました");
-  return response.json();
-}
-
-export async function markConversationRead(conversationId: string): Promise<void> {
-  await fetch(apiUrl(`/api/conversations/${conversationId}/mark-read/`), {
+// 既読マーク
+export async function markRead(conversationId: string): Promise<void> {
+  await fetch(`${BASE}/api/conversations/${conversationId}/mark-read/`, {
     method: "PATCH",
-    headers: buildAuthHeaders(),
+    headers: getAuthHeaders(),
   });
 }
+
+// 会話一覧から特定IDの会話を検索（retrieve APIが存在しないため）
+export async function fetchConversationById(id: string): Promise<Conversation | null> {
+  const data = await fetchConversations();
+  return data.results.find((c) => c.id === id) ?? null;
+}
+
+// 個人チャットを作成（既存の場合はそれを返す）
+export async function createConversation(userId: number): Promise<Conversation> {
+  const res = await fetch(`${BASE}/api/conversations/`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ user_id: userId }),
+  });
+  if (!res.ok) throw new Error("チャットの作成に失敗しました");
+  return res.json();
+}
+>>>>>>> origin/main
