@@ -5,7 +5,7 @@ import React from "react";
 export const SideNav = ({ active }: { active: "home" | "chat" | "profile" | "myproject" }) => {
   const router = useRouter();
 
-  const navStyle = {
+  const navStyle: React.CSSProperties = {
     position: "fixed",
     top: 0,
     left: 0,
@@ -14,7 +14,7 @@ export const SideNav = ({ active }: { active: "home" | "chat" | "profile" | "myp
     background: "#1a1a1a",
     borderRight: "1px solid #2a2a2a",
     display: "flex",
-    flexDirection: "column" as const,
+    flexDirection: "column",
     justifyContent: "flex-start",
     alignItems: "center",
     padding: "32px 0 0",
@@ -22,19 +22,19 @@ export const SideNav = ({ active }: { active: "home" | "chat" | "profile" | "myp
     gap: 8,
   };
 
-  const buttonBase = {
+  const buttonBase: React.CSSProperties = {
     background: "none",
     border: "none",
     cursor: "pointer",
     display: "flex",
-    flexDirection: "column" as const,
+    flexDirection: "column",
     alignItems: "center",
     gap: 4,
     fontSize: "0.82rem",
     marginBottom: 12,
     padding: "8px 6px",
     width: "100%",
-    boxSizing: "border-box" as const,
+    boxSizing: "border-box",
   };
 
   const activeColor = "#8aff1d";
@@ -42,14 +42,14 @@ export const SideNav = ({ active }: { active: "home" | "chat" | "profile" | "myp
 
   const renderItem = (key: "home" | "chat" | "profile" | "myproject", label: string, onClick: () => void, node: React.ReactNode) => {
     const isActive = active === key;
-    const style = {
+    const style: React.CSSProperties = {
       ...buttonBase,
       color: isActive ? activeColor : inactiveColor,
       background: isActive ? "rgba(138,255,29,0.06)" : "none",
       paddingLeft: isActive ? 12 : 6,
       borderLeft: isActive ? `4px solid ${activeColor}` : "4px solid transparent",
       borderRadius: 8,
-      textAlign: "center" as const,
+      textAlign: "center",
     };
     return (
       <button
