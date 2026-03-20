@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                             "id"           uuid         NOT NULL PRIMARY KEY,
                             "status"       varchar(20)  NOT NULL DEFAULT 'pending',
                             "created_at"   timestamptz  NOT NULL,
-                            "applicant_id" bigint       NOT NULL
+                            "applicant_id" uuid         NOT NULL
                                 REFERENCES "accounts_user" ("id")
                                 DEFERRABLE INITIALLY DEFERRED,
                             "project_id"   uuid         NOT NULL
