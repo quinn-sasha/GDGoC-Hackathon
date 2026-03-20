@@ -15,8 +15,8 @@ class TechSkillSerializer(serializers.ModelSerializer):
 
 class MyProfileSerializer(serializers.ModelSerializer):
     """自分のプロフィール（email を含む）"""
-
     skills = serializers.SerializerMethodField()
+    projects = serializers.SerializerMethodField()
     skill_ids = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=TechSkill.objects.all(),
@@ -35,6 +35,7 @@ class MyProfileSerializer(serializers.ModelSerializer):
             "github_url",
             "icon_image_path",
             "skills",
+            "projects",
             "skill_ids",
             "created_at",
             "updated_at",
@@ -44,6 +45,13 @@ class MyProfileSerializer(serializers.ModelSerializer):
     @extend_schema_field(TechSkillSerializer(many=True))
     def get_skills(self, obj):
         return TechSkillSerializer(obj.skills.all(), many=True).data
+
+    def get_projects(self, obj):
+        # Avoid top-level import to prevent potential circular imports
+        from project.serializers import ProjectListSerializer
+
+        qs = obj.projects.all().order_by("-updated_at")
+        return ProjectListSerializer(qs, many=True, context=self.context).data
 
     def update(self, instance, validated_data):
         skill_ids = validated_data.pop("skill_ids", None)
