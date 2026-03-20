@@ -114,8 +114,13 @@ export async function markRead(conversationId: string): Promise<void> {
 
 // 会話一覧から特定IDの会話を検索（retrieve APIが存在しないため）
 export async function fetchConversationById(id: string): Promise<Conversation | null> {
-  const data = await fetchConversations();
-  return data.results.find((c) => c.id === id) ?? null;
+  const res = await fetch(`${BASE}/api/conversations/${id}/`, {
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("チャットルームの取得に失敗しました");
+  return await res.json();
 }
 
 // 個人チャットを作成（既存の場合はそれを返す）
