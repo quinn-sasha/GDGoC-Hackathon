@@ -358,7 +358,6 @@ export default function HomePage() {
         <section style={{ ...S.section, marginBottom: isPC ? 160 : 240 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <h3 style={{ margin: 5, fontSize: 22 }}>参加中のプロジェクト</h3>
-            <a style={S.viewAll}>もっと見る</a>
           </div>
           {profileProjects.length === 0 ? (
             <div style={{ ...S.card, textAlign: "center", padding: 24 }}>
