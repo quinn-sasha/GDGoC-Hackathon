@@ -14,10 +14,38 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # project_application テーブルは本番 DB に既存のため DB 操作をスキップし、
-        # Django マイグレーション状態の更新のみ行う。
+        # CREATE TABLE IF NOT EXISTS を使うことで、
+        # 本番 DB（既存テーブルあり）でもクリーンな DB でも両方動作する。
         migrations.SeparateDatabaseAndState(
-            database_operations=[],
+            database_operations=[
+                migrations.RunSQL(
+                    sql="""
+                        CREATE TABLE IF NOT EXISTS "project_application" (
+                            "id"           uuid         NOT NULL PRIMARY KEY,
+                            "status"       varchar(20)  NOT NULL DEFAULT 'pending',
+                            "created_at"   timestamptz  NOT NULL,
+                            "applicant_id" bigint       NOT NULL
+                                REFERENCES "accounts_user" ("id")
+                                DEFERRABLE INITIALLY DEFERRED,
+                            "project_id"   uuid         NOT NULL
+                                REFERENCES "project_project" ("id")
+                                DEFERRABLE INITIALLY DEFERRED
+                        );
+                        DO $$
+                        BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM pg_constraint
+                                WHERE conname = 'project_application_project_id_applicant_id_uniq'
+                            ) THEN
+                                ALTER TABLE "project_application"
+                                    ADD CONSTRAINT "project_application_project_id_applicant_id_uniq"
+                                    UNIQUE ("project_id", "applicant_id");
+                            END IF;
+                        END $$;
+                    """,
+                    reverse_sql='DROP TABLE IF EXISTS "project_application";',
+                ),
+            ],
             state_operations=[
                 migrations.CreateModel(
                     name='Application',

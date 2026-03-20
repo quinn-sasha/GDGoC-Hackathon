@@ -1,4 +1,5 @@
 import uuid
+import uuid6
 
 from django.contrib.auth.models import (
     AbstractBaseUser,
@@ -28,6 +29,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     username = models.CharField(max_length=30, unique=True)
     email = models.EmailField("メールアドレス", unique=True)
     profile_bio = models.CharField("プロフィール文", max_length=160, blank=True, default="")

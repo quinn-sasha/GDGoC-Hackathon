@@ -1,3 +1,6 @@
+from datetime import timedelta
+from django.db.models import Count, Q
+from django.utils import timezone
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
@@ -40,11 +43,6 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
 
 @extend_schema_view(
-    list=extend_schema(
-        summary="プロジェクト一覧取得",
-        description="登録されているプロジェクトの簡易情報を一覧で返します。最新の更新順に並んでいます。",
-        responses={200: ProjectListSerializer(many=True)},
-    ),
     retrieve=extend_schema(
         summary="プロジェクト詳細取得",
         description="指定されたUUIDを持つプロジェクトの全詳細情報を返します。技術スタックや保存数も含まれます。",
@@ -244,3 +242,54 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Response(
             {"status": "saved", "is_saved": True}, status=status.HTTP_200_OK
         )
+
+    @extend_schema(
+        summary="推薦プロジェクト一覧取得",
+        description="ユーザーのスキルやトレンドに合わせたプロジェクトを優先度順（スキルマッチ > 人気 > 新着）のフラットなリストとして返します。",
+        responses={200: ProjectListSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        MAX_ITEMS_PER_CATEGORY = 10
+        recommended_projects = []
+        base_queryset = self.get_queryset()
+        unique_ids = set()
+        # Skill Match
+        if request.user.is_authenticated:
+            user_skill_names = [name.strip().lower() for name in request.user.skills.values_list("name", flat=True)]
+            if user_skill_names:
+                skill_matching_projects = list(
+                    base_queryset
+                    .annotate(
+                        skill_match_count=Count("technologies", filter=Q(technologies__name__in=user_skill_names))
+                    )
+                    .filter(skill_match_count__gt=0)
+                    .order_by("-skill_match_count", "-updated_at")
+                    .distinct()
+                    [:MAX_ITEMS_PER_CATEGORY]
+                )
+                recommended_projects.extend(skill_matching_projects)
+                unique_ids |= {p.id for p in skill_matching_projects}
+        # Popularity (直近二週間に更新されたプロジェクトの保存数）
+        POPULAR_DAYS_LIMIT = 14
+        since = timezone.now() - timedelta(days=POPULAR_DAYS_LIMIT)
+        popular_projects = list(
+            base_queryset
+            .exclude(id__in=unique_ids)
+            .filter(updated_at__gte=since)
+            .annotate(popularity_score=Count("saved_by_users"))
+            .order_by("-popularity_score", "-updated_at")
+            [:MAX_ITEMS_PER_CATEGORY]
+        )
+        recommended_projects.extend(popular_projects)
+        unique_ids |= {p.id for p in popular_projects}
+        # Recent Projects
+        recent_projects = list(
+            base_queryset
+            .exclude(id__in=unique_ids)
+            .order_by("-updated_at")
+            [:MAX_ITEMS_PER_CATEGORY]
+        )
+        recommended_projects.extend(recent_projects)
+
+        serializer = ProjectListSerializer(recommended_projects, many=True)
+        return Response(serializer.data)

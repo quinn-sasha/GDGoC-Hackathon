@@ -1,9 +1,7 @@
 # 変数の定義
-# メールアドレスはローカル利用時に各自の値に置き換えてください
 @host = http://localhost:8000
-@test_email = user@example.com
+@test_email = example@example.com
 @test_password = YourSecurePassword123!
-
 
 ### 1. ユーザー登録
 POST {{host}}/api/auth/register
@@ -15,7 +13,7 @@ Content-Type: application/json
     "password": "{{test_password}}"
 }
 
-### 2. メールアドレス確認（※ここはターミナルを見て手動でコピペ！）
+### 2. メールアドレス確認（※ターミナルを見て手動でコピペ！）
 POST {{host}}/api/auth/verify-email
 Content-Type: application/json
 
@@ -39,7 +37,7 @@ Content-Type: application/json
     client.log("Login & Token saved: " + client.global.get("auth_token"));
 %}
 
-### 4. Create Project1 (IDを自動保存)
+### 4. Create Project1 (IDを自動保存) - Web系技術
 POST {{host}}/api/projects/
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
@@ -51,12 +49,11 @@ Content-Type: application/json
     "progress_status": "opening"
 }
 > {%
-    // 【追加】作られたProject1のUUIDを "project1_id" として自動保存
     client.global.set("project1_id", response.body.id);
     client.log("Project 1 Created: " + client.global.get("project1_id"));
 %}
 
-### 5. Create Project2
+### 5. Create Project2 (IDを自動保存) - 低レイヤー系技術
 POST {{host}}/api/projects/
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
@@ -67,21 +64,50 @@ Content-Type: application/json
     "technologies": ["c", "linux", "networking"],
     "progress_status": "ongoing"
 }
+> {%
+    client.global.set("project2_id", response.body.id);
+    client.log("Project 2 Created: " + client.global.get("project2_id"));
+%}
 
-### 6. Get Projects List
+### 6-1. 推薦フィード取得 (未ログイン状態)
+# 期待する結果：スキルマッチは機能せず、単純な「新着順（Project2 -> Project1）」で返るはず
 GET {{host}}/api/projects/
 
-### 7. Get a Project Detail (自動保存したIDを使用)
-GET {{host}}/api/projects/{{project1_id}}/
+
+### 6-2. ユーザーのスキルを設定する（※スキルマッチ検証用）
+# ※Profileアプリのエンドポイントに合わせてパスやBodyを調整してください。
+# ここではユーザーが「C言語」と「Linux」のスキルを持っていると仮定します。
+PATCH {{host}}/api/profile/me/
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "skills": ["c", "linux"]
+}
+
+
+### 6-3. 推薦フィード取得 (ログイン状態：スキルマッチの検証)
+# 期待する結果：スキルに「c」と「linux」を持つため、Project2（HTTPサーバー）が
+# スキルマッチ枠として優先的に一番上に表示されるはず。
+GET {{host}}/api/projects/
 Authorization: Bearer {{auth_token}}
 
-### 8. Save a Project (自動保存したIDを使用)
-# 2回連続で実行すると「保存解除」になります
+
+### 7. Project1をお気に入り保存する（人気スコアのブースト）
+# Project1の保存数を増やして、人気度を上げます。
 POST {{host}}/api/projects/{{project1_id}}/toggle_save/
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
-### 9. プロジェクト詳細の取得（保存状態の確認）
+
+### 8. 推薦フィード取得 (ログイン状態：人気スコアの検証)
+# 期待する結果：
+# 1番目: Project2 (スキルマッチ枠)
+# 2番目: Project1 (人気枠 - 保存されたためスコアが上がっている)
+GET {{host}}/api/projects/
+Authorization: Bearer {{auth_token}}
+
+### 9. Get a Project Detail
 GET {{host}}/api/projects/{{project1_id}}/
 Authorization: Bearer {{auth_token}}
 
@@ -96,7 +122,6 @@ Content-Type: application/json
 }
 > {%
     client.global.set("test_project_id", response.body.id);
-    client.log("Test Project Created with ID: " + client.global.get("test_project_id"));
 %}
 
 ### 11. 技術スタックを指定しないで更新
@@ -106,13 +131,4 @@ Content-Type: application/json
 
 {
     "title": "更新テスト（技術スタック省略）"
-}
-
-### 12. 技術スタックを「空リスト」で更新
-PATCH {{host}}/api/projects/{{test_project_id}}/
-Authorization: Bearer {{auth_token}}
-Content-Type: application/json
-
-{
-    "technologies": []
 }

@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir poetry==2.1.1
 # 依存関係のインストール（キャッシュ活用のため先にコピー）
 COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false && \
+    poetry lock --no-interaction && \
     poetry install --no-interaction --no-ansi --only main
 
 # アプリケーションコードをコピー
