@@ -375,21 +375,28 @@ export default function HomePage() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {profileProjects.slice(0, 3).map((project: any) => (
-                <article key={project.name} style={{ ...S.card, borderLeft: `6px solid ${project.accent}` }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-                    <div style={{ ...S.avatarSm, background: project.accent }}>{project.initial}</div>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#fff" }}>{project.name}</h4>
-                      <span style={{ fontSize: "0.78rem", color: "#aaaaaa" }}>{project.meta}</span>
+              {profileProjects.slice(0, 3).map((project: any) => {
+                const statusLabel: Record<string, string> = { opening: "開始前", ongoing: "進行中", completed: "完了" };
+                const statusColor: Record<string, string> = { opening: "#6699ff", ongoing: "#4fc3a1", completed: "#cc9944" };
+                const color = statusColor[project.progress_status] ?? "#8aff1d";
+                const label = statusLabel[project.progress_status] ?? project.progress_status ?? "";
+                const initial = (project.title?.[0] ?? "?").toUpperCase();
+                return (
+                  <article key={project.id} style={{ ...S.card, borderLeft: `6px solid ${color}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+                      <div style={{ ...S.avatarSm, background: color }}>{initial}</div>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#fff" }}>{project.title}</h4>
+                        <span style={{ fontSize: "0.78rem", color: "#aaaaaa" }}>{project.owner_name}</span>
+                      </div>
+                      <span style={{ fontSize: "0.7rem", color: "#fff", background: color, borderRadius: 6, padding: "3px 8px" }}>{label}</span>
+                      <button type="button" style={{ marginLeft: 8, borderRadius: 8, border: "none", background: "#8aff1d", color: "#111111", fontWeight: 700, fontSize: "0.85rem", padding: "7px 14px", cursor: "pointer" }} onClick={() => router.push(`/project/${project.id}`)}>
+                        開く
+                      </button>
                     </div>
-                    <span style={{ fontSize: "0.7rem", color: "#fff", background: project.accent, borderRadius: 6, padding: "3px 8px" }}>{project.badge}</span>
-                    <button type="button" style={{ marginLeft: 8, borderRadius: 8, border: "none", background: "#8aff1d", color: "#111111", fontWeight: 700, fontSize: "0.85rem", padding: "7px 14px", cursor: "pointer" }} onClick={() => router.push(`/myproject/${encodeURIComponent(project.name)}`)}>
-                      開く
-                    </button>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
