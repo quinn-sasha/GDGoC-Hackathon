@@ -315,6 +315,7 @@ export default function ProfileEditPage() {
                     setShowPicker={setShowPicker}
                     allSkills={allSkills}
                     skillsFailed={skillsFailed}
+                    profileLoading={profileLoading}
                   />
                 </div>
               )}
@@ -386,6 +387,7 @@ export default function ProfileEditPage() {
                   setShowPicker={setShowPicker}
                   allSkills={allSkills}
                   skillsFailed={skillsFailed}
+                  profileLoading={profileLoading}
                 />
               )}
 
@@ -579,6 +581,7 @@ function SkillSection({
   setShowPicker,
   allSkills,
   skillsFailed,
+  profileLoading,
 }: {
   labelStyle: React.CSSProperties;
   selectedSkills: Skill[];
@@ -586,6 +589,7 @@ function SkillSection({
   setShowPicker: React.Dispatch<React.SetStateAction<boolean>>;
   allSkills: Skill[];
   skillsFailed: boolean;
+  profileLoading: boolean;
 }) {
   return (
     <div>
@@ -632,7 +636,13 @@ function SkillSection({
           padding: "11px 0", cursor: "pointer",
         }}
       >
-        {skillsFailed ? "読み込みに失敗しました" : allSkills.length === 0 ? "読み込み中..." : "スキルを選択"}
+        {skillsFailed
+          ? "読み込みに失敗しました"
+          : profileLoading
+          ? "読み込み中..."
+          : allSkills.length === 0
+          ? "スキルがありません"
+          : "スキルを選択"}
       </button>
     </div>
   );
