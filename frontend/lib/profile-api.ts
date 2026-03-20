@@ -14,6 +14,7 @@ function getAuthHeaders(): Record<string, string> {
 export async function fetchProfile() {
   const res = await fetch(`${BASE}/api/profile/me/`, {
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   if (!res.ok) throw new Error("プロフィール取得に失敗しました");
   return res.json();
@@ -25,6 +26,7 @@ export async function updateProfile(data: Record<string, unknown>) {
     method: "PATCH",
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
+    credentials: "include",
   });
   if (!res.ok) throw new Error("プロフィール更新に失敗しました");
   return res.json();
@@ -34,6 +36,7 @@ export async function updateProfile(data: Record<string, unknown>) {
 export async function fetchSkills(): Promise<{ id: number; name: string }[]> {
   const res = await fetch(`${BASE}/api/profile/skills/`, {
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   if (!res.ok) throw new Error("スキル一覧取得に失敗しました");
   return res.json();
@@ -50,6 +53,7 @@ export async function uploadProfileIcon(file: File): Promise<string> {
     method: "POST",
     headers,
     body: formData,
+    credentials: "include",
   });
   if (!res.ok) {
     let detail = "アイコンのアップロードに失敗しました";
@@ -71,6 +75,7 @@ export async function fetchProfileById(userId: string) {
       : `${BASE}/api/profile/${encodeURIComponent(userId)}/`;
   const res = await fetch(url, {
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   if (!res.ok) throw new Error("プロフィール取得に失敗しました");
   return res.json();
