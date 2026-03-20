@@ -59,6 +59,8 @@ function mapProjectForUI(p: any) {
     initial,
     accent,
     members,
+    owner_name: p.owner_name ?? "",
+    owner_icon: p.owner_icon ?? "",
     // keep original raw data available if needed
     _raw: p,
   };
