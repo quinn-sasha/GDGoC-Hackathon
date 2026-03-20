@@ -81,28 +81,28 @@ export default function MyProjectsIndexPage() {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
             {projects.map((p: any) => (
-              <article key={p.id ?? p.name} style={{ borderRadius: 12, overflow: "hidden", background: "#171717", border: "1px solid #232323" }}>
+              <article key={p.id ?? p.title} style={{ borderRadius: 12, overflow: "hidden", background: "#171717", border: "1px solid #232323" }}>
                 <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", background: "#152126" }}>
                   {p.project_image_path ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.project_image_path} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <img src={p.project_image_path} alt={p.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
-                    <Image src={buildProjectImage(p.name ?? String(p.id ?? "proj"), p.category ?? "") } alt={p.name ?? "project"} fill sizes="(max-width:480px) 100vw, 420px" style={{ objectFit: "cover" }} />
+                    <Image src={buildProjectImage(p.title ?? String(p.id ?? "proj"), p.categories?.[0] ?? "") } alt={p.title ?? "project"} fill sizes="(max-width:480px) 100vw, 420px" style={{ objectFit: "cover" }} />
                   )}
                 </div>
                 <div style={{ padding: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <h3 style={{ margin: 0, fontSize: "1rem" }}>{p.name}</h3>
-                    <span style={{ fontSize: "0.78rem", color: "#aaa" }}>{p.meta ?? ""}</span>
+                    <h3 style={{ margin: 0, fontSize: "1rem" }}>{p.title}</h3>
+                    <span style={{ fontSize: "0.78rem", color: "#aaa" }}>{p.meta ?? p.progress_status ?? ""}</span>
                   </div>
                   <p style={{ margin: "0 0 12px", color: "#cfcfcf", fontSize: "0.9rem", lineHeight: 1.5 }}>{p.description ?? "説明がありません"}</p>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: p.accent ?? "#333", display: "grid", placeItems: "center", color: "#fff", fontWeight: 800 }}>{(p.name ?? "?")[0]?.toUpperCase()}</div>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: p.accent ?? "#333", display: "grid", placeItems: "center", color: "#fff", fontWeight: 800 }}>{(p.title ?? "?")[0]?.toUpperCase()}</div>
                       <div style={{ color: "#9a9a9a", fontSize: "0.85rem" }}>{p.owner_name ?? p.owner?.username ?? "不明"}</div>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => router.push(p.id ? `/project/${p.id}` : `/myproject/${encodeURIComponent(p.name)}`)} style={{ borderRadius: 8, background: "#8aff1d", color: "#111", fontWeight: 700, padding: "8px 12px", border: "none", cursor: "pointer" }}>開く</button>
+                      <button onClick={() => router.push(p.id ? `/project/${p.id}` : `/myproject/${encodeURIComponent(p.title)}`)} style={{ borderRadius: 8, background: "#8aff1d", color: "#111", fontWeight: 700, padding: "8px 12px", border: "none", cursor: "pointer" }}>開く</button>
                     </div>
                   </div>
                 </div>
