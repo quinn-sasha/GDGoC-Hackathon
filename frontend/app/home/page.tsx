@@ -426,41 +426,43 @@ export default function HomePage() {
               </div>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
               {profileProjects.map((project: any) => {
-                const statusLabel: Record<string, string> = { opening: "開始前", ongoing: "進行中", completed: "完了" };
-                const statusColor: Record<string, string> = { opening: "#6699ff", ongoing: "#4fc3a1", completed: "#cc9944" };
-                const color = statusColor[project.progress_status] ?? "#8aff1d";
-                const label = statusLabel[project.progress_status] ?? project.progress_status ?? "";
-                const title = project.title ?? project.name ?? String(project.id ?? "");
-                const initial = (title?.[0] ?? "?").toUpperCase();
+                const STATUS_LABEL: Record<string, string> = { opening: "開始前", ongoing: "進行中", completed: "完了" };
+                const STATUS_COLOR: Record<string, string> = { opening: "#6699ff", ongoing: "#4fc3a1", completed: "#cc9944" };
+                const title = project.title ?? String(project.id ?? "");
                 return (
-                  <article key={project.id ?? title} style={{ ...S.card, borderLeft: `6px solid ${color}` }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-                      <div style={{ ...S.avatarSm, background: color, overflow: "hidden" }}>
-                        {project.owner_icon ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={project.owner_icon} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        ) : initial}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#fff" }}>{title}</h4>
-                        <span style={{ fontSize: "0.78rem", color: "#aaaaaa" }}>{project.owner_name ?? project.meta}</span>
-                      </div>
-                      <span style={{ fontSize: "0.7rem", color: "#fff", background: color, borderRadius: 6, padding: "3px 8px" }}>{label}</span>
-                      <button
-                        type="button"
-                        style={{ marginLeft: 8, borderRadius: 8, border: "none", background: "#8aff1d", color: "#111111", fontWeight: 700, fontSize: "0.85rem", padding: "7px 14px", cursor: "pointer" }}
-                        onClick={() => router.push(project.id ? `/project/${project.id}` : `/myproject/${encodeURIComponent(project.name ?? title)}`)}
-                      >
-                        開く
-                      </button>
+                  <article key={project.id ?? title} style={{ borderRadius: 12, overflow: "hidden", background: "#171717", border: "1px solid #232323" }}>
+                    <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", background: "#152126" }}>
+                      {project.project_image_path ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={project.project_image_path} alt={title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <Image src={buildProjectImage(title, project.categories?.[0] ?? "")} alt={title} fill sizes="(max-width:480px) 100vw, 420px" style={{ objectFit: "cover" }} />
+                      )}
                     </div>
-                    {project.badge ? (
-                      <div style={{ marginTop: 6 }}>
-                        <span style={{ fontSize: "0.7rem", color: "#fff", background: project.accent ?? color, borderRadius: 6, padding: "3px 8px" }}>{project.badge}</span>
+                    <div style={{ padding: 14 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#fff" }}>{title}</h4>
+                        <span style={{ fontSize: "0.75rem", color: STATUS_COLOR[project.progress_status] ?? "#aaa", background: "#1a1a1a", borderRadius: 5, padding: "2px 8px", whiteSpace: "nowrap" as const }}>
+                          {STATUS_LABEL[project.progress_status] ?? project.progress_status ?? ""}
+                        </span>
                       </div>
-                    ) : null}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                        <div style={{ width: 18, height: 18, borderRadius: "50%", background: "linear-gradient(135deg,#f9a8a8 0%,#d47fa6 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#fff", fontWeight: 700, overflow: "hidden", flexShrink: 0 }}>
+                          {project.owner_icon ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={project.owner_icon} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            (project.owner_name?.[0] ?? "?").toUpperCase()
+                          )}
+                        </div>
+                        <span style={{ fontSize: "0.78rem", color: "#aaaaaa" }}>{project.owner_name}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <button type="button" onClick={() => router.push(`/project/${project.id}`)} style={{ borderRadius: 8, background: "#8aff1d", color: "#111", fontWeight: 700, padding: "8px 12px", border: "none", cursor: "pointer", fontSize: "0.85rem" }}>開く</button>
+                      </div>
+                    </div>
                   </article>
                 );
               })}
