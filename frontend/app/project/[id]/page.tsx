@@ -178,7 +178,7 @@ export default function ProjectDetailPage() {
   const handleSubmitApplication = async () => {
     setSubmitError("");
     if (!canSubmit) {
-      setSubmitError("応募する役割と参加ペースを選び、20文字以上のメッセージを入力してください。");
+      setSubmitError("参加したい役割と参加ペースを選び、20文字以上のメッセージを入力してください。");
       return;
     }
     setIsSubmitting(true);
@@ -195,7 +195,7 @@ export default function ProjectDetailPage() {
         setChatId(result.chatroom_id);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "応募の送信に失敗しました。";
+      const msg = err instanceof Error ? err.message : "参加申請の送信に失敗しました。";
       if (msg.includes("申請済み")) {
         setIsAlreadyApplied(true);
         setIsSubmitted(true);
@@ -262,7 +262,7 @@ export default function ProjectDetailPage() {
         <div>
           <p style={{ margin: 0, color: "#8d8d8d", fontSize: "0.75rem", letterSpacing: "0.08em" }}>APPLICATION</p>
           <h2 style={{ margin: "6px 0 0", fontSize: "1.05rem" }}>
-            {isOwner ? "あなたのプロジェクト" : "このプロジェクトに応募する"}
+            {isOwner ? "あなたのプロジェクト" : "このプロジェクトに参加する"}
           </h2>
         </div>
         <span style={{ borderRadius: 999, background: "#222222", color: "#d0d0d0", padding: "8px 12px", fontSize: "0.76rem", whiteSpace: "nowrap" }}>
@@ -272,6 +272,20 @@ export default function ProjectDetailPage() {
 
       {isOwner && (
         <div style={{ marginTop: 16 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button type="button" onClick={() => router.push(`/project/${projectId}/edit`)}
+              style={{ flex: 1, borderRadius: 12, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ffffff", padding: "10px", cursor: "pointer" }}>
+              募集を編集
+            </button>
+            <button type="button" onClick={handleShare}
+              style={{ borderRadius: 12, border: "1px solid #2a2a2a", background: "#111111", color: "#d0d0d0", padding: "10px", cursor: "pointer" }}>
+              {shareCopied ? "リンクをコピーしました" : "募集をシェア"}
+            </button>
+            <button type="button" onClick={handleDeleteProject} disabled={isDeleting}
+              style={{ borderRadius: 12, border: "none", background: "#ff6b6b", color: "#111111", padding: "10px", cursor: "pointer" }}>
+              削除
+            </button>
+          </div>
           {applications.length === 0 ? (
             <div
               style={{
@@ -281,29 +295,15 @@ export default function ProjectDetailPage() {
                 padding: "14px",
               }}
             >
-              <p style={{ margin: 0, color: "#a0b0ff", fontWeight: 700 }}>まだ応募はありません</p>
+              <p style={{ margin: 0, color: "#a0b0ff", fontWeight: 700 }}>まだ参加申請はありません</p>
               <p style={{ margin: "8px 0 0", color: "#c7c7c7", fontSize: "0.86rem", lineHeight: 1.6 }}>
-                応募が届いたらここに表示されます。
+                参加申請が届いたらここに表示されます。
               </p>
-                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                    <button type="button" onClick={() => router.push(`/project/${projectId}/edit`)}
-                      style={{ flex: 1, borderRadius: 12, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ffffff", padding: "10px", cursor: "pointer" }}>
-                      募集を編集
-                    </button>
-                    <button type="button" onClick={handleShare}
-                      style={{ borderRadius: 12, border: "1px solid #2a2a2a", background: "#111111", color: "#d0d0d0", padding: "10px", cursor: "pointer" }}>
-                      {shareCopied ? "リンクをコピーしました" : "募集をシェア"}
-                    </button>
-                    <button type="button" onClick={handleDeleteProject} disabled={isDeleting}
-                      style={{ borderRadius: 12, border: "none", background: "#ff6b6b", color: "#111111", padding: "10px", cursor: "pointer" }}>
-                      削除
-                    </button>
-                  </div>
             </div>
           ) : (
             <div>
               <p style={{ margin: "0 0 12px", color: "#8d8d8d", fontSize: "0.8rem" }}>
-                応募者 {applications.length}名
+                参加申請者 {applications.length}名
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {applications.map((app) => (
@@ -431,7 +431,7 @@ export default function ProjectDetailPage() {
       {!isOwner && !isSubmitted && (
         <>
           <div style={{ marginTop: 18 }}>
-            <label style={{ display: "block", color: "#8d8d8d", fontSize: "0.8rem", marginBottom: 10 }}>応募したい役割</label>
+            <label style={{ display: "block", color: "#8d8d8d", fontSize: "0.8rem", marginBottom: 10 }}>参加したい役割</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {roleOptions.map((role) => {
                 const isActive = selectedRole === role;
@@ -522,7 +522,7 @@ export default function ProjectDetailPage() {
           }}
         >
           <p style={{ margin: 0, color: "#dfffbd", fontWeight: 700 }}>
-            {isAlreadyApplied ? "このプロジェクトにはすでに申請済みです" : "応募内容を送信しました"}
+            {isAlreadyApplied ? "このプロジェクトにはすでに申請済みです" : "参加申請を送信しました"}
           </p>
           <p style={{ margin: "8px 0 0", color: "#c7c7c7", fontSize: "0.86rem", lineHeight: 1.6 }}>
             ホストからの返信をお待ちください。
@@ -552,7 +552,7 @@ export default function ProjectDetailPage() {
                 cursor: canSubmit ? "pointer" : "default", opacity: canSubmit ? 1 : 0.55,
               }}
             >
-              {isSubmitting ? "応募を送信中..." : "この内容で応募する"}
+              {isSubmitting ? "参加申請を送信中..." : "この内容で参加申請する"}
             </button>
           )}
         </div>
@@ -647,7 +647,7 @@ export default function ProjectDetailPage() {
               <div style={{ display: "flex", gap: 10, marginTop: 12, alignItems: "center", color: "#bdbdbd", fontSize: "0.85rem" }}>
                 <span style={{ background: "#111111", border: "1px solid #222222", padding: "6px 10px", borderRadius: 999 }}>保存数: {project.num_saved ?? 0}</span>
                 {isOwner ? (
-                  <span style={{ background: "#111111", border: "1px solid #222222", padding: "6px 10px", borderRadius: 999 }}>応募数: {applications.length}</span>
+                  <span style={{ background: "#111111", border: "1px solid #222222", padding: "6px 10px", borderRadius: 999 }}>参加申請数: {applications.length}</span>
                 ) : (
                   <></>
                 )}
@@ -808,7 +808,7 @@ export default function ProjectDetailPage() {
                 boxShadow: "0 12px 24px rgba(0,0,0,0.35)",
               }}
             >
-              {isSubmitting ? "応募を送信中..." : "この内容で応募する"}
+              {isSubmitting ? "参加申請を送信中..." : "この内容で参加申請する"}
             </button>
           )}
         </div>
