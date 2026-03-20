@@ -78,6 +78,7 @@ export async function fetchConversations(): Promise<PaginatedConversations> {
   const res = await fetch(`${BASE}/api/conversations/`, {
     headers: getAuthHeaders(),
     cache: "no-store",
+    credentials: "include",
   });
   if (!res.ok) throw new Error("チャット一覧の取得に失敗しました");
   return res.json();
@@ -88,6 +89,7 @@ export async function fetchMessages(conversationId: string): Promise<PaginatedMe
   const res = await fetch(`${BASE}/api/conversations/${conversationId}/messages/`, {
     headers: getAuthHeaders(),
     cache: "no-store",
+    credentials: "include",
   });
   if (!res.ok) throw new Error("メッセージの取得に失敗しました");
   return res.json();
@@ -99,6 +101,7 @@ export async function sendMessage(conversationId: string, content: string): Prom
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({ content }),
+    credentials: "include",
   });
   if (!res.ok) throw new Error("メッセージの送信に失敗しました");
   return res.json();
@@ -109,6 +112,7 @@ export async function markRead(conversationId: string): Promise<void> {
   await fetch(`${BASE}/api/conversations/${conversationId}/mark-read/`, {
     method: "PATCH",
     headers: getAuthHeaders(),
+    credentials: "include",
   });
 }
 
@@ -117,8 +121,27 @@ export async function fetchConversationById(id: string): Promise<Conversation | 
   const res = await fetch(`${BASE}/api/conversations/${id}/`, {
     headers: getAuthHeaders(),
     cache: "no-store",
+    credentials: "include",
   });
-  if (res.status === 404) return null;
+  // If the retrieve endpoint returns 404, fall back to scanning the paginated
+  // conversations list (some deployments may not expose the retrieve endpoint
+  // or the item may be present in a later page).
+  if (res.status === 404) {
+    try {
+      let url: string | null = `${BASE}/api/conversations/`;
+      while (url) {
+        const listRes = await fetch(url, { headers: getAuthHeaders(), cache: "no-store", credentials: "include" });
+        if (!listRes.ok) throw new Error("チャット一覧の取得に失敗しました");
+        const data = (await listRes.json()) as PaginatedConversations;
+        const found = data.results.find((c) => c.id === id);
+        if (found) return found;
+        url = data.next;
+      }
+    } catch {
+      // ignore and return null below
+    }
+    return null;
+  }
   if (!res.ok) throw new Error("チャットルームの取得に失敗しました");
   return await res.json();
 }
