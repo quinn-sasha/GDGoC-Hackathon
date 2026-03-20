@@ -321,16 +321,36 @@ export default function HomePage() {
               ))
             )}
           </div>
-          {/* ページインジケーター */}
-          {recommendedProjects.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 12 }}>
-              <button type="button" onClick={() => handleSelectRecommendation(Math.max(0, activeRecommendationIndex - 1))} disabled={activeRecommendationIndex === 0} style={{ background: "none", border: "none", color: activeRecommendationIndex === 0 ? "#333" : "#888", cursor: activeRecommendationIndex === 0 ? "default" : "pointer", padding: "0 4px", fontSize: 16, lineHeight: 1 }} aria-label="前へ">‹</button>
-              <span style={{ fontSize: "0.8rem", color: "#666", minWidth: 40, textAlign: "center" as const }}>
-                {activeRecommendationIndex + 1} / {recommendedProjects.length}
-              </span>
-              <button type="button" onClick={() => handleSelectRecommendation(Math.min(recommendedProjects.length - 1, activeRecommendationIndex + 1))} disabled={activeRecommendationIndex === recommendedProjects.length - 1} style={{ background: "none", border: "none", color: activeRecommendationIndex === recommendedProjects.length - 1 ? "#333" : "#888", cursor: activeRecommendationIndex === recommendedProjects.length - 1 ? "default" : "pointer", padding: "0 4px", fontSize: 16, lineHeight: 1 }} aria-label="次へ">›</button>
-            </div>
-          )}
+          {/* グループドットインジケーター（3件 = 1グループ） */}
+          {recommendedProjects.length > 0 && (() => {
+            const groupSize = 3;
+            const groupCount = Math.ceil(recommendedProjects.length / groupSize);
+            const activeGroup = Math.floor(activeRecommendationIndex / groupSize);
+            return (
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 14 }}>
+                {Array.from({ length: groupCount }).map((_, gIdx) => (
+                  <button
+                    key={`group-dot-${gIdx}`}
+                    type="button"
+                    aria-label={`${gIdx + 1}グループ目を表示`}
+                    aria-pressed={activeGroup === gIdx}
+                    onClick={() => handleSelectRecommendation(gIdx * groupSize)}
+                    style={{
+                      width: activeGroup === gIdx ? 22 : 8,
+                      height: 8,
+                      borderRadius: 4,
+                      background: activeGroup === gIdx ? "#ffffff" : "#444444",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      transition: "width 200ms ease, background 200ms ease",
+                      outline: "none",
+                    }}
+                  />
+                ))}
+              </div>
+            );
+          })()}
         </section>
 
         <section ref={updatesSectionRef} style={S.section}>
