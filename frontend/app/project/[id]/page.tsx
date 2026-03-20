@@ -279,7 +279,7 @@ export default function ProjectDetailPage() {
             </button>
             <button type="button" onClick={handleShare}
               style={{ borderRadius: 12, border: "1px solid #2a2a2a", background: "#111111", color: "#d0d0d0", padding: "10px", cursor: "pointer" }}>
-              {shareCopied ? "リンクをコピーしました" : "募集をシェア"}
+              {shareCopied ? "コピーしました" : "シェア"}
             </button>
             <button type="button" onClick={handleDeleteProject} disabled={isDeleting}
               style={{ borderRadius: 12, border: "none", background: "#ff6b6b", color: "#111111", padding: "10px", cursor: "pointer" }}>
